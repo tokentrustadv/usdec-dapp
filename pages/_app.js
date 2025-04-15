@@ -1,10 +1,14 @@
 import '../styles.css';
 import { WagmiConfig, createClient, configureChains } from 'wagmi';
 import { publicProvider } from 'wagmi/providers/public';
-import { chain, getDefaultWallets, RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import { baseSepolia } from 'wagmi/chains';
+import {
+  RainbowKitProvider,
+  getDefaultWallets,
+} from '@rainbow-me/rainbowkit';
 
 const { chains, provider } = configureChains(
-  [chain.baseSepolia],
+  [baseSepolia],
   [publicProvider()]
 );
 
