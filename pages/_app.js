@@ -1,11 +1,34 @@
 import '../styles.css';
-import { WagmiConfig, createClient, configureChains } from 'wagmi';
+import { WagmiConfig, configureChains, createClient } from 'wagmi';
 import { publicProvider } from 'wagmi/providers/public';
-import { baseSepolia } from 'wagmi/chains';
 import {
   RainbowKitProvider,
   getDefaultWallets,
 } from '@rainbow-me/rainbowkit';
+
+// Manually define the Base Sepolia chain
+const baseSepolia = {
+  id: 84532,
+  name: 'Base Sepolia',
+  network: 'base-sepolia',
+  nativeCurrency: {
+    name: 'Base Sepolia ETH',
+    symbol: 'ETH',
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ['https://sepolia.base.org'],
+    },
+    public: {
+      http: ['https://sepolia.base.org'],
+    },
+  },
+  blockExplorers: {
+    default: { name: 'BaseScan', url: 'https://sepolia-explorer.base.org' },
+  },
+  testnet: true,
+};
 
 const { chains, provider } = configureChains(
   [baseSepolia],
@@ -13,7 +36,7 @@ const { chains, provider } = configureChains(
 );
 
 const { connectors } = getDefaultWallets({
-  appName: 'USDEC Testnet',
+  appName: 'USDEC Test',
   chains,
 });
 
