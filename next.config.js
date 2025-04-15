@@ -4,18 +4,18 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)', // Apply to all routes
+        source: '/(.*)', // Applies to all routes
         headers: [
           {
             key: 'Content-Security-Policy',
             value: `
               default-src 'self';
-              script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://*.walletconnect.com;
+              script-src 'self' 'unsafe-eval' 'unsafe-inline' https:;
               style-src 'self' 'unsafe-inline';
               connect-src *;
               img-src * blob: data:;
               font-src 'self' https://fonts.gstatic.com;
-            `.replace(/\n/g, ''),
+            `.replace(/\s{2,}/g, ' ').trim(),
           },
         ],
       },
