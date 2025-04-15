@@ -17,6 +17,7 @@ const nextConfig = {
               connect-src *;
               img-src * blob: data:;
               font-src 'self' https://fonts.gstatic.com;
+              frame-src *;
             `.replace(/\n/g, ''),
           },
         ],
