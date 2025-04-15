@@ -3,7 +3,7 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useContractWrite, usePrepareContractWrite } from 'wagmi';
 import usdecAbi from '../usdecAbi.json';
 
-const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65'; // Replace with your contract address
+const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65'; // Your deployed contract address
 
 export default function Home() {
   const { isConnected } = useAccount();
@@ -17,10 +17,12 @@ export default function Home() {
     abi: usdecAbi,
     functionName: 'mint',
     enabled: isConnected && isValidAmount,
-    args: isValidAmount ? [parsedAmount * 1e6] : undefined, // Assumes 6 decimals
+    args: isValidAmount ? [BigInt(parsedAmount * 1e6)] : undefined, // Use BigInt for safe handling
   });
 
   const { write, isLoading } = useContractWrite(config);
+
+  console.log({ isConnected, isValidAmount, write });
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -40,7 +42,7 @@ export default function Home() {
           />
           <button
             onClick={() => write?.()}
-            disabled={!write || isLoading}
+            disabled={!write || isLoading || !isValidAmount}
             style={{ marginLeft: '1rem' }}
           >
             {isLoading ? 'Minting...' : 'Mint USDEC'}
