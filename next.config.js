@@ -1,6 +1,5 @@
 // next.config.js
 
-/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   async headers() {
@@ -11,14 +10,14 @@ const nextConfig = {
           {
             key: 'Content-Security-Policy',
             value: `
-              default-src * 'self' data: blob:;
-              script-src * 'self' 'unsafe-eval' 'unsafe-inline' data:;
-              style-src * 'self' 'unsafe-inline' data:;
+              default-src 'self';
+              script-src 'self' 'unsafe-eval' 'unsafe-inline' https://*.walletconnect.com https://*.cloudflare.com https://cdn.jsdelivr.net;
+              style-src 'self' 'unsafe-inline';
               connect-src *;
               img-src * data: blob:;
-              font-src * 'self' data:;
+              font-src 'self' https://fonts.gstatic.com;
               frame-src *;
-            `.replace(/\s{2,}/g, ' ').trim(),
+            `.replace(/\n/g, ''),
           },
         ],
       },
