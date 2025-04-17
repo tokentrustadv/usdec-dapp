@@ -3,54 +3,52 @@ import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount, useContractWrite, usePrepareContractWrite } from 'wagmi';
 import usdecAbi from '../usdecAbi.json';
 
-const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65'; // Replace with your deployed contract address
+const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65';
 
 export default function Home() {
   const { isConnected } = useAccount();
   const [amount, setAmount] = useState('');
 
   const parsedAmount = parseFloat(amount);
-  const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
+  const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0;
 
-  const { config, error: prepareError } = usePrepareContractWrite({
+  const { config } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'mint',
     enabled: isConnected && isValidAmount,
-    args: isValidAmount ? [BigInt(parsedAmount * 1e6)] : undefined, // 6 decimals assumed
+    args: isValidAmount ? [BigInt(parsedAmount * 1e6)] : undefined, // Mint expects uint256
   });
 
-  const { write, isLoading, error: writeError } = useContractWrite(config);
+  const { write, isLoading } = useContractWrite(config);
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>USDEC Mint App (Base Sepolia)</h1>
+    <div style={{ padding: '2rem' }}>
+      <h1>USDEC Testnet</h1>
       <ConnectButton />
-
       {isConnected && (
         <div style={{ marginTop: '2rem' }}>
           <input
             type="number"
-            placeholder="Enter USDC amount"
+            placeholder="Enter USDC Amount"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             min="0"
-            max="500"
             step="0.01"
           />
           <button
-  onClick={() => write?.()}
-  disabled={!write || isLoading || !isValidAmount}
-  style={{ marginLeft: '1rem' }}
->
-  {isLoading ? 'Minting...' : 'Mint USDEC'}
-</button>
-          {prepareError && (
-            <p style={{ color: 'red' }}>⚠️ Prepare error: {prepareError.message}</p>
-          )}
-          {writeError && (
-            <p style={{ color: 'red' }}>⚠️ Write error: {writeError.message}</p>
-          )}
+            onClick={() => write?.()}
+            disabled={!write || isLoading}
+            style={{
+              marginLeft: '1rem',
+              backgroundColor: isValidAmount ? '#0070f3' : '#999',
+              color: '#fff',
+              padding: '0.5rem 1rem',
+              cursor: isValidAmount ? 'pointer' : 'not-allowed',
+            }}
+          >
+            {isLoading ? 'Minting...' : 'Mint USDEC'}
+          </button>
         </div>
       )}
     </div>
