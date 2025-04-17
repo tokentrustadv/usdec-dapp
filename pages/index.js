@@ -16,21 +16,21 @@ export default function Home() {
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'mint',
+    args: isValidAmount ? [BigInt(Math.floor(parsedAmount * 1e6))] : undefined,
     enabled: isConnected && isValidAmount,
-    args: isValidAmount ? [BigInt(parsedAmount * 1e6)] : undefined, // Mint expects uint256
   });
 
   const { write, isLoading } = useContractWrite(config);
 
   return (
     <div style={{ padding: '2rem' }}>
-      <h1>USDEC Testnet</h1>
+      <h1>USDEC Testnet App</h1>
       <ConnectButton />
       {isConnected && (
         <div style={{ marginTop: '2rem' }}>
           <input
             type="number"
-            placeholder="Enter USDC Amount"
+            placeholder="Amount (e.g. 10)"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             min="0"
@@ -39,13 +39,7 @@ export default function Home() {
           <button
             onClick={() => write?.()}
             disabled={!write || isLoading}
-            style={{
-              marginLeft: '1rem',
-              backgroundColor: isValidAmount ? '#0070f3' : '#999',
-              color: '#fff',
-              padding: '0.5rem 1rem',
-              cursor: isValidAmount ? 'pointer' : 'not-allowed',
-            }}
+            style={{ marginLeft: '1rem' }}
           >
             {isLoading ? 'Minting...' : 'Mint USDEC'}
           </button>
