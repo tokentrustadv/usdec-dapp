@@ -16,7 +16,7 @@ export default function Home() {
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'mint',
-    args: isValidAmount ? [BigInt(Math.floor(parsedAmount * 1e6))] : undefined,
+    args: isValidAmount ? [BigInt(Math.round(parsedAmount * 1e6))] : undefined,
     enabled: isConnected && isValidAmount,
   });
 
@@ -30,7 +30,7 @@ export default function Home() {
         <div style={{ marginTop: '2rem' }}>
           <input
             type="number"
-            placeholder="Amount (e.g. 10)"
+            placeholder="Amount (Max 500 USDC)"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             min="0"
@@ -38,7 +38,7 @@ export default function Home() {
           />
           <button
             onClick={() => write?.()}
-            disabled={!write || isLoading}
+            disabled={!write || isLoading || !isValidAmount}
             style={{ marginLeft: '1rem' }}
           >
             {isLoading ? 'Minting...' : 'Mint USDEC'}
