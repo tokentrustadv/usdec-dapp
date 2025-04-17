@@ -39,13 +39,12 @@ export default function Home() {
             step="0.01"
           />
           <button
-            style={{ marginLeft: '1rem' }}
-            onClick={() => write?.()}
-            disabled={!write || isLoading}
-          >
-            {isLoading ? 'Minting...' : 'Mint USDEC'}
-          </button>
-
+  onClick={() => write?.()}
+  disabled={!write || isLoading || !isValidAmount}
+  style={{ marginLeft: '1rem' }}
+>
+  {isLoading ? 'Minting...' : 'Mint USDEC'}
+</button>
           {prepareError && (
             <p style={{ color: 'red' }}>⚠️ Prepare error: {prepareError.message}</p>
           )}
