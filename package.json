@@ -11,7 +11,7 @@
     "next": "14.1.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "wagmi": "0.9.12",
+    "wagmi": "0.9.5",
     "@rainbow-me/rainbowkit": "0.9.0",
     "viem": "^1.16.0",
     "ethers": "^5.7.2"
