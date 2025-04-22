@@ -1,42 +1,36 @@
-import '../styles.css';
-import { WagmiConfig, configureChains, createClient } from 'wagmi';
+import { getDefaultWallets, RainbowKitProvider } from '@rainbow-me/rainbowkit';
+import { configureChains, createClient, WagmiConfig } from 'wagmi';
 import { publicProvider } from 'wagmi/providers/public';
-import {
-  RainbowKitProvider,
-  getDefaultWallets,
-} from '@rainbow-me/rainbowkit';
-
-// Manually define the Base Sepolia chain
-const baseSepolia = {
-  id: 84532,
-  name: 'Base Sepolia',
-  network: 'base-sepolia',
-  nativeCurrency: {
-    name: 'Base Sepolia ETH',
-    symbol: 'ETH',
-    decimals: 18,
-  },
-  rpcUrls: {
-    default: {
-      http: ['https://sepolia.base.org'],
-    },
-    public: {
-      http: ['https://sepolia.base.org'],
-    },
-  },
-  blockExplorers: {
-    default: { name: 'BaseScan', url: 'https://sepolia-explorer.base.org' },
-  },
-  testnet: true,
-};
+import { jsonRpcProvider } from 'wagmi/providers/jsonRpc';
+import '@rainbow-me/rainbowkit/styles.css';
 
 const { chains, provider } = configureChains(
-  [baseSepolia],
-  [publicProvider()]
+  [
+    {
+      id: 84532,
+      name: 'Base Sepolia',
+      network: 'base-sepolia',
+      nativeCurrency: {
+        decimals: 18,
+        name: 'Base Sepolia ETH',
+        symbol: 'ETH',
+      },
+      rpcUrls: {
+        default: {
+          http: ['https://sepolia.base.org'],
+        },
+      },
+      blockExplorers: {
+        default: { name: 'BaseScan', url: 'https://base-sepolia.blockscout.com' },
+      },
+      testnet: true,
+    },
+  ],
+  [jsonRpcProvider({ rpc: () => ({ http: 'https://sepolia.base.org' }) }), publicProvider()]
 );
 
 const { connectors } = getDefaultWallets({
-  appName: 'USDEC Test',
+  appName: 'USDEC',
   chains,
 });
 
