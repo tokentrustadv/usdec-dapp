@@ -1,5 +1,5 @@
 import { getDefaultWallets, RainbowKitProvider } from '@rainbow-me/rainbowkit';
-import { configureChains, createConfig, WagmiConfig } from 'wagmi';
+import { configureChains, createClient, WagmiConfig } from 'wagmi';
 import { publicProvider } from 'wagmi/providers/public';
 import { jsonRpcProvider } from 'wagmi/providers/jsonRpc';
 import '@rainbow-me/rainbowkit/styles.css';
@@ -16,9 +16,7 @@ const { chains, publicClient } = configureChains(
         symbol: 'ETH',
       },
       rpcUrls: {
-        default: {
-          http: ['https://sepolia.base.org'],
-        },
+        default: 'https://sepolia.base.org', // ← FIXED: now a string, not object
       },
       blockExplorers: {
         default: { name: 'BaseScan', url: 'https://base-sepolia.blockscout.com' },
@@ -26,24 +24,29 @@ const { chains, publicClient } = configureChains(
       testnet: true,
     },
   ],
-  [jsonRpcProvider({ rpc: () => ({ http: 'https://sepolia.base.org' }) }), publicProvider()]
+  [
+    jsonRpcProvider({
+      rpc: () => ({ http: 'https://sepolia.base.org' }),
+    }),
+    publicProvider(),
+  ]
 );
 
 const { connectors } = getDefaultWallets({
   appName: 'USDEC',
-  projectId: 'ced749b38222900677e11e8d3b875b2e',
+  projectId: 'ced749b38222900677e11e8d3b875b2e', // ← your WalletConnect project ID
   chains,
 });
 
-const wagmiConfig = createConfig({
+const wagmiClient = createClient({
   autoConnect: true,
   connectors,
-  publicClient,
+  publicClient, // ← FIXED: use publicClient, not provider
 });
 
 export default function App({ Component, pageProps }) {
   return (
-    <WagmiConfig config={wagmiConfig}>
+    <WagmiConfig client={wagmiClient}>
       <RainbowKitProvider chains={chains}>
         <Component {...pageProps} />
       </RainbowKitProvider>
