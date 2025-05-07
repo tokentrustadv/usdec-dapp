@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount, useWriteContract, usePrepareContractWrite } from 'wagmi';
+import { useAccount, useContractWrite, usePrepareContractWrite } from 'wagmi';
 import usdecAbi from '../usdecAbi.json';
 
 const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65';
@@ -12,7 +12,7 @@ export default function Home() {
   const parsedAmount = parseFloat(amount);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0;
 
-  const { data: config } = usePrepareContractWrite({
+  const { config } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'mint',
@@ -20,7 +20,7 @@ export default function Home() {
     enabled: isConnected && isValidAmount,
   });
 
-  const { writeContract, isPending } = useWriteContract();
+  const { write, isLoading } = useContractWrite(config);
 
   return (
     <div style={{ padding: '2rem' }}>
@@ -37,11 +37,11 @@ export default function Home() {
             step="0.01"
           />
           <button
-            onClick={() => writeContract(config)}
-            disabled={!config || isPending || !isValidAmount}
+            onClick={() => write?.()}
+            disabled={!write || isLoading || !isValidAmount}
             style={{ marginLeft: '1rem' }}
           >
-            {isPending ? 'Minting...' : 'Mint USDEC'}
+            {isLoading ? 'Minting...' : 'Mint USDEC'}
           </button>
         </div>
       )}
