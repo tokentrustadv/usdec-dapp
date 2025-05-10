@@ -1,28 +1,20 @@
 import { useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount, useContractRead, useContractWrite, usePrepareContractWrite } from 'wagmi';
+import { useAccount, useContractWrite, usePrepareContractWrite, useContractRead } from 'wagmi';
+import { parseUnits } from 'viem';
 import usdecAbi from '../usdecAbi.json';
+import { toast } from 'react-hot-toast';
 
-const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65';
+const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65'; // Your contract
 
 export default function Home() {
-  const { isConnected, address } = useAccount();
+  const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0;
 
-  const { config } = usePrepareContractWrite({
-    address: USDEC_ADDRESS,
-    abi: usdecAbi,
-    functionName: 'mint',
-    args: isValidAmount ? [BigInt(Math.round(parsedAmount * 1e6))] : undefined,
-    enabled: isConnected && isValidAmount,
-  });
-
-  const { write, isLoading } = useContractWrite(config);
-
-  const { data: balance, isLoading: balanceLoading } = useContractRead({
+  const { data: balanceData } = useContractRead({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'balanceOf',
@@ -30,33 +22,51 @@ export default function Home() {
     watch: true,
   });
 
+  const { config } = usePrepareContractWrite({
+    address: USDEC_ADDRESS,
+    abi: usdecAbi,
+    functionName: 'mint',
+    args: isValidAmount ? [parseUnits(amount, 6)] : undefined,
+    enabled: isConnected && isValidAmount,
+  });
+
+  const { write, isLoading, isSuccess } = useContractWrite({
+    ...config,
+    onSuccess() {
+      toast.success('Minted successfully!');
+    },
+    onError(error) {
+      toast.error(`Mint failed: ${error.message}`);
+    },
+  });
+
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1 className="text-2xl font-bold mb-4">USDEC Testnet App</h1>
+    <div className="p-6 max-w-md mx-auto bg-white rounded-xl shadow-md space-y-4">
+      <h1 className="text-xl font-bold">USDEC Testnet App</h1>
       <ConnectButton />
       {isConnected && (
-        <div style={{ marginTop: '2rem' }}>
+        <>
           <input
             type="number"
             placeholder="Amount (Max 500 USDC)"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            className="mt-4 p-2 border rounded w-full"
             min="0"
             step="0.01"
           />
           <button
             onClick={() => write?.()}
             disabled={!write || isLoading || !isValidAmount}
-            style={{ marginLeft: '1rem' }}
+            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded w-full"
           >
             {isLoading ? 'Minting...' : 'Mint USDEC'}
           </button>
-
-          <div style={{ marginTop: '1rem' }}>
+          <p className="text-gray-700 mt-2">
             <strong>USDEC Balance:</strong>{' '}
-            {balanceLoading ? 'Loading...' : `${Number(balance) / 1e6} USDEC`}
-          </div>
-        </div>
+            {balanceData ? Number(balanceData) / 1e6 : '0'} USDEC
+          </p>
+        </>
       )}
     </div>
   );
