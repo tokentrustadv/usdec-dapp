@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount, useBalance, useContractWrite, usePrepareContractWrite } from 'wagmi';
+import { useAccount, useContractWrite, usePrepareContractWrite, useBalance } from 'wagmi';
 import { toast } from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
 
@@ -11,9 +11,9 @@ export default function Home() {
   const [amount, setAmount] = useState('');
 
   const parsedAmount = parseFloat(amount);
-  const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
+  const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0;
 
-  const { data: balanceData } = useBalance({
+  const { data: balanceData, refetch: refetchBalance } = useBalance({
     address,
     token: USDEC_ADDRESS,
     watch: true,
@@ -28,10 +28,15 @@ export default function Home() {
     enabled: isConnected && isValidAmount,
   });
 
-  const { write, isLoading, isSuccess, isError } = useContractWrite({
+  const { write, isLoading } = useContractWrite({
     ...config,
-    onSuccess: () => toast.success('Mint Successful!'),
-    onError: () => toast.error('Mint Failed.'),
+    onSuccess: () => {
+      toast.success('Mint Successful!');
+      setTimeout(() => refetchBalance(), 3000); // give RPC time to catch up
+    },
+    onError: () => {
+      toast.error('Mint Failed');
+    },
   });
 
   return (
