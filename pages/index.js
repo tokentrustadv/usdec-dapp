@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount, useContractWrite, usePrepareContractWrite, useBalance } from 'wagmi';
+import {
+  useAccount,
+  useContractWrite,
+  usePrepareContractWrite,
+  useBalance,
+} from 'wagmi';
 import { toast } from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
 
@@ -9,6 +14,7 @@ const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65';
 export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
+  const [txHash, setTxHash] = useState(null);
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0;
@@ -30,9 +36,10 @@ export default function Home() {
 
   const { write, isLoading } = useContractWrite({
     ...config,
-    onSuccess: () => {
+    onSuccess: (tx) => {
       toast.success('Mint Successful!');
-      setTimeout(() => refetchBalance(), 3000); // give RPC time to catch up
+      setTxHash(tx.hash);
+      setTimeout(() => refetchBalance(), 3000);
     },
     onError: () => {
       toast.error('Mint Failed');
@@ -68,6 +75,18 @@ export default function Home() {
           <div className="mt-4 text-center">
             <strong>USDEC Balance:</strong>{' '}
             {balanceData ? `${balanceData.formatted} USDEC` : '...'}
+            {txHash && (
+              <div className="mt-2 text-sm">
+                <a
+                  href={`https://sepolia.basescan.org/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 underline"
+                >
+                  View Transaction
+                </a>
+              </div>
+            )}
           </div>
         </div>
       )}
