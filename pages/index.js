@@ -39,16 +39,19 @@ export default function Home() {
   });
 
   return (
-    <div style={{ backgroundColor: '#d6d3cd' }} className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md border border-purple-200 text-center">
-        <img
-          src="/usdec-logo.png"
-          alt="USDEC Logo"
-          className="w-20 h-20 mx-auto mb-2 rounded-full object-contain"
-        />
-        <p className="text-xs text-gray-500 italic mb-4">Pronounced: “US Deck”</p>
-        <h1 className="text-2xl font-bold text-purple-800 mb-2">USDEC Testnet App</h1>
-        <p className="text-gray-500 mb-4 text-sm">Mint USDEC tokens on Base Sepolia</p>
+    <div style={{ backgroundColor: '#d6d3cd' }} className="min-h-screen flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md border border-purple-300 text-center">
+        <div className="flex flex-col items-center mb-4">
+          <img
+            src="/usdec-logo.png"
+            alt="USDEC Logo"
+            className="w-16 h-16 object-contain mb-2"
+          />
+          <p className="text-xs text-gray-600 italic">Pronounced: “US Deck”</p>
+          <h1 className="text-xl font-bold text-purple-800 mt-1">USDEC</h1>
+          <p className="text-sm text-gray-600 mt-1">A Stablecoin for the Creator Economy</p>
+        </div>
+
         <ConnectButton />
 
         {isConnected && (
