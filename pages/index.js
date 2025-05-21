@@ -39,7 +39,7 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-100 flex flex-col items-center justify-center p-4">
+    <div style={{ backgroundColor: '#d6d3cd' }} className="min-h-screen flex flex-col items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md border border-purple-200 text-center">
         <img src="/usdec-logo.png" alt="USDEC Logo" className="w-16 h-16 mx-auto mb-4 rounded-full" />
         <h1 className="text-2xl font-bold text-purple-800 mb-2">USDEC Testnet App</h1>
