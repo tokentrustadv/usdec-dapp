@@ -1,25 +1,35 @@
 import { useState } from 'react';
+import { useAccount, useContractWrite, usePrepareContractWrite, useBalance } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import {
-  useAccount,
-  useContractWrite,
-  usePrepareContractWrite,
-  useWaitForTransaction,
-  useBalance,
-} from 'wagmi';
-import { parseUnits } from 'viem';
-import toast from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
+import toast from 'react-hot-toast';
 
 const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
-  const [txHash, setTxHash] = useState(null);
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0;
+
+  const { config } = usePrepareContractWrite({
+    address: USDEC_ADDRESS,
+    abi: usdecAbi,
+    functionName: 'mint',
+    args: isValidAmount ? [BigInt(Math.round(parsedAmount * 1e6))] : undefined,
+    enabled: isConnected && isValidAmount,
+  });
+
+  const { write, isLoading, data: txData } = useContractWrite({
+    ...config,
+    onSuccess() {
+      toast.success('Mint Successful');
+    },
+    onError(error) {
+      toast.error(`Mint Failed: ${error.message}`);
+    },
+  });
 
   const { data: balanceData } = useBalance({
     address,
@@ -28,42 +38,16 @@ export default function Home() {
     enabled: isConnected,
   });
 
-  const { config } = usePrepareContractWrite({
-    address: USDEC_ADDRESS,
-    abi: usdecAbi,
-    functionName: 'mint',
-    args: isValidAmount ? [parseUnits(amount, 6)] : undefined,
-    enabled: isConnected && isValidAmount,
-  });
-
-  const {
-    write,
-    data: writeData,
-    isLoading,
-  } = useContractWrite({
-    ...config,
-    onSuccess: (data) => {
-      setTxHash(data.hash);
-    },
-  });
-
-  useWaitForTransaction({
-    hash: writeData?.hash,
-    onSuccess() {
-      toast.success('Minted Successfully');
-    },
-  });
-
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-      <div className="bg-white shadow-lg rounded-xl p-6 w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-4 text-center text-blue-800">USDEC Testnet App</h1>
-        <div className="flex justify-center mb-6">
-          <ConnectButton />
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-purple-100 flex flex-col items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md border border-purple-200 text-center">
+        <img src="/usdec-logo.png" alt="USDEC Logo" className="w-16 h-16 mx-auto mb-4 rounded-full" />
+        <h1 className="text-2xl font-bold text-purple-800 mb-2">USDEC Testnet App</h1>
+        <p className="text-gray-500 mb-4 text-sm">Mint USDEC tokens on Base Sepolia</p>
+        <ConnectButton />
 
         {isConnected && (
-          <>
+          <div className="mt-6">
             <input
               type="number"
               placeholder="Amount (Max 500 USDC)"
@@ -71,40 +55,38 @@ export default function Home() {
               onChange={(e) => setAmount(e.target.value)}
               min="0"
               step="0.01"
-              className="w-full p-3 border border-gray-300 rounded mb-4 text-lg"
+              className="w-full p-2 border border-gray-300 rounded mb-4"
             />
             <button
               onClick={() => write?.()}
               disabled={!write || isLoading || !isValidAmount}
-              className={`w-full p-3 rounded text-white text-lg font-semibold ${
+              className={`w-full p-2 rounded text-white ${
                 !write || isLoading || !isValidAmount
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                  : 'bg-purple-600 hover:bg-purple-700'
               }`}
             >
               {isLoading ? 'Minting...' : 'Mint USDEC'}
             </button>
 
-            <div className="mt-4 text-center">
-              <strong className="block text-gray-700">USDEC Balance:</strong>
-              <span className="text-xl font-mono">
-                {balanceData ? `${balanceData.formatted} USDEC` : '...'}
-              </span>
+            <div className="mt-4 text-sm">
+              <strong className="text-gray-700">USDEC Balance:</strong>{' '}
+              {balanceData ? `${balanceData.formatted} USDEC` : '...'}
             </div>
 
-            {txHash && (
-              <div className="mt-3 text-center">
+            {txData && (
+              <div className="mt-2 text-sm">
                 <a
-                  href={`https://sepolia.basescan.org/tx/${txHash}`}
+                  href={`https://sepolia.basescan.org/tx/${txData.hash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-500 underline text-sm"
+                  className="text-blue-600 hover:underline"
                 >
                   View Transaction
                 </a>
               </div>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>
