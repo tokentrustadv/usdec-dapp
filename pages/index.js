@@ -48,7 +48,7 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-[#d6d3cd] flex flex-col items-center p-4">
+    <div className="min-h-screen flex flex-col items-center p-4" style={{ backgroundColor: '#d6d3cd' }}>
       <div className="flex flex-col items-center mb-6">
         <Image
           src="/usdec-logo.png"
