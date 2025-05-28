@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
   useAccount,
   useContractWrite,
   usePrepareContractWrite,
-  useBalance,
 } from 'wagmi';
+import { readContract } from '@wagmi/core';
 import toast from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
 
@@ -16,6 +16,7 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
+  const [balance, setBalance] = useState(null);
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount =
@@ -34,18 +35,35 @@ export default function Home() {
     onSuccess(data) {
       setTxHash(data.hash);
       toast.success('Minted successfully!');
+      fetchBalance(); // refresh balance after mint
     },
     onError(error) {
       toast.error(error.message || 'Transaction failed');
     },
   });
 
-  const { data: balanceData } = useBalance({
-    address,
-    token: USDEC_ADDRESS,
-    watch: true,
-    enabled: isConnected,
-  });
+  async function fetchBalance() {
+    if (isConnected && address) {
+      try {
+        const raw = await readContract({
+          address: USDEC_ADDRESS,
+          abi: usdecAbi,
+          functionName: 'balanceOf',
+          args: [address],
+        });
+        const formatted = Number(raw) / 1e18;
+        setBalance(formatted.toFixed(2));
+      } catch (error) {
+        console.error('Error reading balance:', error);
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (isConnected) {
+      fetchBalance();
+    }
+  }, [isConnected, address]);
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4" style={{ backgroundColor: '#d6d3cd' }}>
@@ -89,7 +107,7 @@ export default function Home() {
 
             <div className="mt-4">
               <strong>USDEC Balance:</strong>{' '}
-              {balanceData ? `${balanceData.formatted} USDEC` : '...'}
+              {balance !== null ? `${balance} USDEC` : 'Loading...'}
             </div>
 
             {txHash && (
