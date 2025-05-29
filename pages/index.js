@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
   useAccount,
   useContractWrite,
   usePrepareContractWrite,
+  useBalance,
 } from 'wagmi';
-import { readContract } from '@wagmi/core';
 import toast from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
 
@@ -16,7 +16,6 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
-  const [balance, setBalance] = useState(null);
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount =
@@ -35,35 +34,18 @@ export default function Home() {
     onSuccess(data) {
       setTxHash(data.hash);
       toast.success('Minted successfully!');
-      fetchBalance(); // refresh balance after mint
     },
     onError(error) {
       toast.error(error.message || 'Transaction failed');
     },
   });
 
-  async function fetchBalance() {
-    if (isConnected && address) {
-      try {
-        const raw = await readContract({
-          address: USDEC_ADDRESS,
-          abi: usdecAbi,
-          functionName: 'balanceOf',
-          args: [address],
-        });
-        const formatted = Number(raw) / 1e18;
-        setBalance(formatted.toFixed(2));
-      } catch (error) {
-        console.error('Error reading balance:', error);
-      }
-    }
-  }
-
-  useEffect(() => {
-    if (isConnected) {
-      fetchBalance();
-    }
-  }, [isConnected, address]);
+  const { data: balanceData } = useBalance({
+    address,
+    token: USDEC_ADDRESS,
+    watch: true,
+    enabled: isConnected,
+  });
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4" style={{ backgroundColor: '#d6d3cd' }}>
@@ -80,7 +62,7 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-sm text-center">
+      <div className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
         <ConnectButton />
         {isConnected && (
           <div className="mt-4">
@@ -107,7 +89,7 @@ export default function Home() {
 
             <div className="mt-4">
               <strong>USDEC Balance:</strong>{' '}
-              {balance !== null ? `${balance} USDEC` : 'Loading...'}
+              {balanceData ? `${balanceData.formatted} USDEC` : '...'}
             </div>
 
             {txHash && (
@@ -124,6 +106,29 @@ export default function Home() {
             )}
           </div>
         )}
+      </div>
+
+      <div className="bg-white shadow-lg rounded-2xl p-6 w-full max-w-sm text-center border-2 border-[#0399C4]">
+        <div className="flex justify-center mb-4">
+          <Image
+            src="/morpho-logo.svg"
+            alt="Morpho Logo"
+            width={120}
+            height={32}
+          />
+        </div>
+        <h2 className="text-xl font-semibold text-[#0399C4] mb-2">
+          Earn Yield with Morpho
+        </h2>
+        <p className="text-gray-600 text-sm mb-4">
+          Stake USDC to earn passive yield. Powered by Morpho’s secure DeFi protocol.
+        </p>
+        <button
+          disabled
+          className="w-full p-2 rounded bg-[#0399C4] text-white font-semibold opacity-60 cursor-not-allowed"
+        >
+          Coming Soon
+        </button>
       </div>
     </div>
   );
