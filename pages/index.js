@@ -49,7 +49,7 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center p-4"
+      className="min-h-screen flex flex-col items-center p-4 text-white"
       style={{ backgroundColor: '#4B4B4B', fontFamily: '"FK Grotesk", sans-serif' }}
     >
       {/* Logo & Tagline */}
@@ -60,19 +60,19 @@ export default function Home() {
           width={140}
           height={140}
         />
-        <p className="text-sm italic text-white mt-2">(pronounced “US Deck”)</p>
-        <p className="text-sm italic text-white">
+        <p className="text-sm italic mt-2">(pronounced “US Deck”)</p>
+        <p className="text-sm italic">
           A Stablecoin for the Creator Economy
         </p>
       </div>
 
       {/* Wallet Connection Area */}
-      <div className="bg-[#878787] shadow-xl rounded-t-2xl p-6 w-full max-w-sm text-center text-white">
+      <div className="bg-[#878787] shadow-xl rounded-t-2xl p-6 w-full max-w-sm text-center">
         <ConnectButton />
       </div>
 
       {/* Minting Area & Balance */}
-      <div className="bg-white shadow-xl rounded-b-2xl p-6 w-full max-w-sm text-center mb-6">
+      <div className="bg-[#4B4B4B] shadow-xl rounded-b-2xl p-6 w-full max-w-sm text-center mb-6 border-t border-white">
         {isConnected && (
           <div className="mt-4">
             <input
@@ -82,21 +82,21 @@ export default function Home() {
               onChange={(e) => setAmount(e.target.value)}
               min="0"
               step="0.01"
-              className="w-full p-2 border border-gray-300 rounded mb-4"
+              className="w-full p-2 border border-white bg-transparent text-white rounded mb-4 placeholder-white"
             />
             <button
               onClick={() => write?.()}
               disabled={!write || isLoading || !isValidAmount}
-              className={`w-full p-2 rounded text-white ${
+              className={`w-full p-2 rounded ${
                 !write || isLoading || !isValidAmount
-                  ? 'bg-gray-400'
+                  ? 'bg-gray-500'
                   : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+              } text-white`}
             >
               {isLoading ? 'Minting...' : 'Mint USDEC'}
             </button>
 
-            <div className="mt-4 text-black bg-white p-2 rounded">
+            <div className="mt-4">
               <strong>USDEC Balance:</strong>{' '}
               {balanceData ? `${balanceData.formatted} USDEC` : '...'}
             </div>
@@ -107,7 +107,7 @@ export default function Home() {
                   href={`https://sepolia.basescan.org/tx/${txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline text-sm"
+                  className="text-blue-400 hover:underline text-sm"
                 >
                   View Transaction
                 </a>
@@ -118,7 +118,7 @@ export default function Home() {
       </div>
 
       {/* Morpho Yield Card */}
-      <div className="bg-white shadow-lg rounded-2xl p-6 w-full max-w-sm text-center border-2 border-[#0399C4]">
+      <div className="bg-[#4B4B4B] shadow-lg rounded-2xl p-6 w-full max-w-sm text-center border-2 border-[#0399C4]">
         <div className="flex justify-center mb-4">
           <Image
             src="/morpho-logo.svg"
@@ -130,7 +130,7 @@ export default function Home() {
         <h2 className="text-2xl font-semibold text-[#0399C4] mb-2">
           Earn Yield with Morpho
         </h2>
-        <p className="text-gray-600 text-sm mb-4">
+        <p className="text-white text-sm mb-4">
           Stake USDC to earn passive yield. Powered by Morpho’s secure DeFi protocol.
         </p>
         <button
