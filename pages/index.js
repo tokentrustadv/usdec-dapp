@@ -52,7 +52,7 @@ export default function Home() {
       className="min-h-screen flex flex-col items-center p-4"
       style={{ backgroundColor: '#4B4B4B', fontFamily: '"FK Grotesk", sans-serif' }}
     >
-      {/* Logo + Tagline */}
+      {/* Logo & Tagline */}
       <div className="flex flex-col items-center mb-6">
         <Image
           src="/usdec-brandtrans.png"
@@ -60,10 +60,8 @@ export default function Home() {
           width={140}
           height={140}
         />
-        <p className="text-sm italic text-gray-200 mt-2">
-          (pronounced “US Deck”)
-        </p>
-        <p className="text-sm italic text-gray-200">
+        <p className="text-sm italic text-white mt-2">(pronounced “US Deck”)</p>
+        <p className="text-sm italic text-white">
           A Stablecoin for the Creator Economy
         </p>
       </div>
@@ -73,7 +71,7 @@ export default function Home() {
         <ConnectButton />
       </div>
 
-      {/* Main Minting Area */}
+      {/* Minting Area & Balance */}
       <div className="bg-white shadow-xl rounded-b-2xl p-6 w-full max-w-sm text-center mb-6">
         {isConnected && (
           <div className="mt-4">
@@ -98,7 +96,7 @@ export default function Home() {
               {isLoading ? 'Minting...' : 'Mint USDEC'}
             </button>
 
-            <div className="mt-4 text-black">
+            <div className="mt-4 text-black bg-white p-2 rounded">
               <strong>USDEC Balance:</strong>{' '}
               {balanceData ? `${balanceData.formatted} USDEC` : '...'}
             </div>
@@ -119,7 +117,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Morpho Yield Section */}
+      {/* Morpho Yield Card */}
       <div className="bg-white shadow-lg rounded-2xl p-6 w-full max-w-sm text-center border-2 border-[#0399C4]">
         <div className="flex justify-center mb-4">
           <Image
@@ -129,7 +127,7 @@ export default function Home() {
             height={32}
           />
         </div>
-        <h2 className="text-xl font-semibold text-[#0399C4] mb-2">
+        <h2 className="text-2xl font-semibold text-[#0399C4] mb-2">
           Earn Yield with Morpho
         </h2>
         <p className="text-gray-600 text-sm mb-4">
