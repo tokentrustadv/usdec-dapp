@@ -48,7 +48,7 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen font-sans flex flex-col items-center p-4 bg-[#878787] text-white">
+    <div className="min-h-screen flex flex-col items-center p-4" style={{ backgroundColor: '#4B4B4B' }}>
       <div className="flex flex-col items-center mb-6">
         <Image
           src="/usdec-brandtrans.png"
@@ -56,16 +56,16 @@ export default function Home() {
           width={160}
           height={160}
         />
-        <p className="text-sm italic mt-2 text-white">
+        <p className="text-sm italic text-white">
           (pronounced “US Deck”)<br />
           A Stablecoin for the Creator Economy
         </p>
       </div>
 
-      <div className="bg-white text-black shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
+      <div className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
         <ConnectButton />
         {isConnected && (
-          <div className="mt-4 text-black">
+          <div className="mt-4">
             <input
               type="number"
               placeholder="Amount (Max 500 USDC)"
@@ -73,7 +73,7 @@ export default function Home() {
               onChange={(e) => setAmount(e.target.value)}
               min="0"
               step="0.01"
-              className="w-full p-2 border border-gray-300 bg-transparent text-black placeholder-black rounded mb-4"
+              className="w-full p-2 border border-gray-300 rounded mb-4"
             />
             <button
               onClick={() => write?.()}
@@ -87,7 +87,7 @@ export default function Home() {
               {isLoading ? 'Minting...' : 'Mint USDEC'}
             </button>
 
-            <div className="mt-4 text-black">
+            <div className="mt-4">
               <strong>USDEC Balance:</strong>{' '}
               {balanceData ? `${balanceData.formatted} USDEC` : '...'}
             </div>
@@ -108,7 +108,7 @@ export default function Home() {
         )}
       </div>
 
-      <div className="bg-white text-black shadow-lg rounded-2xl p-6 w-full max-w-sm text-center border-2 border-[#0399C4]">
+      <div className="bg-white shadow-lg rounded-2xl p-6 w-full max-w-sm text-center border-2 border-[#0399C4]">
         <div className="flex justify-center mb-4">
           <Image
             src="/morpho-logo.svg"
