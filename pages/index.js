@@ -48,7 +48,11 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col items-center p-4" style={{ backgroundColor: '#4B4B4B' }}>
+    <div
+      className="min-h-screen flex flex-col items-center p-4"
+      style={{ backgroundColor: '#4B4B4B', fontFamily: '"FK Grotesk", sans-serif' }}
+    >
+      {/* Logo + Tagline */}
       <div className="flex flex-col items-center mb-6">
         <Image
           src="/usdec-brandtrans.png"
@@ -56,16 +60,21 @@ export default function Home() {
           width={140}
           height={140}
         />
-        <h1 className="text-xl font-semibold mt-4 text-white font-sans">
-          USDEC (pronounced “US Deck”)
-        </h1>
-        <p className="text-sm italic text-gray-300">
+        <p className="text-sm italic text-gray-200 mt-2">
+          (pronounced “US Deck”)
+        </p>
+        <p className="text-sm italic text-gray-200">
           A Stablecoin for the Creator Economy
         </p>
       </div>
 
-      <div className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
+      {/* Wallet Connection Area */}
+      <div className="bg-[#878787] shadow-xl rounded-t-2xl p-6 w-full max-w-sm text-center text-white">
         <ConnectButton />
+      </div>
+
+      {/* Main Minting Area */}
+      <div className="bg-white shadow-xl rounded-b-2xl p-6 w-full max-w-sm text-center mb-6">
         {isConnected && (
           <div className="mt-4">
             <input
@@ -110,6 +119,7 @@ export default function Home() {
         )}
       </div>
 
+      {/* Morpho Yield Section */}
       <div className="bg-white shadow-lg rounded-2xl p-6 w-full max-w-sm text-center border-2 border-[#0399C4]">
         <div className="flex justify-center mb-4">
           <Image
