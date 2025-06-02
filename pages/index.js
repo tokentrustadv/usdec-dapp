@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
   useAccount,
+  useBalance,
   useContractWrite,
   useContractRead,
   usePrepareContractWrite,
@@ -41,7 +42,6 @@ export default function Home() {
     },
   });
 
-  // ✅ NEW: Use balanceOf instead of useBalance
   const { data: rawBalance } = useContractRead({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -52,8 +52,8 @@ export default function Home() {
   });
 
   const formattedBalance = rawBalance
-    ? (Number(rawBalance.toString()) / 1e18).toFixed(4)
-    : null;
+    ? (Number(rawBalance) / 1e18).toFixed(4)
+    : '0.0000';
 
   const { data: mintTimestamp } = useContractRead({
     address: USDEC_ADDRESS,
@@ -64,10 +64,9 @@ export default function Home() {
     watch: true,
   });
 
-  const unlockTime =
-    mintTimestamp && typeof mintTimestamp === 'bigint'
-      ? new Date(Number(mintTimestamp.toString()) * 1000 + 30 * 24 * 60 * 60 * 1000)
-      : null;
+  const unlockTime = mintTimestamp
+    ? new Date(Number(mintTimestamp) * 1000 + 30 * 24 * 60 * 60 * 1000)
+    : null;
 
   const remaining = unlockTime
     ? formatDistanceToNowStrict(unlockTime, { addSuffix: true })
@@ -79,10 +78,8 @@ export default function Home() {
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'redeem',
-    args: [
-      rawBalance ? BigInt(rawBalance.toString()) : 0n,
-    ],
-    enabled: isConnected && rawBalance && rawBalance > 0 && canRedeem,
+    args: rawBalance ? [rawBalance] : [0n],
+    enabled: isConnected && rawBalance && rawBalance > 0n && canRedeem,
   });
 
   const { write: redeemWrite, isLoading: isRedeeming } = useContractWrite({
@@ -95,6 +92,10 @@ export default function Home() {
     },
   });
 
+  console.log('Wallet:', address);
+  console.log('USDEC Raw Balance:', rawBalance?.toString());
+  console.log('Mint Timestamp:', mintTimestamp);
+
   return (
     <div className="min-h-screen flex flex-col items-center p-4" style={{ backgroundColor: '#4B4B4B' }}>
       <div className="flex flex-col items-center mb-6">
@@ -104,7 +105,7 @@ export default function Home() {
           width={160}
           height={160}
         />
-        <p className="text-sm italic text-white">
+        <p className="text-sm italic text-white text-center">
           (pronounced “US Deck”)<br />
           A Stablecoin for the Creator Economy
         </p>
@@ -142,15 +143,13 @@ export default function Home() {
               {isLoading ? 'Minting...' : 'Mint USDEC'}
             </button>
 
-            {formattedBalance && (
-              <div className="mt-4 text-sm text-gray-700">
-                <p><strong>USDEC Balance:</strong> {formattedBalance}</p>
-                <p><strong>Total USDC Minted:</strong> {formattedBalance}</p>
-                {remaining && (
-                  <p><strong>Redemption Available:</strong> {remaining}</p>
-                )}
-              </div>
-            )}
+            <div className="mt-4 text-sm text-gray-700">
+              <p><strong>USDEC Balance:</strong> {formattedBalance}</p>
+              <p><strong>Total USDC Minted:</strong> {formattedBalance}</p>
+              {remaining && (
+                <p><strong>Redemption Available:</strong> {remaining}</p>
+              )}
+            </div>
 
             {canRedeem && redeemWrite && (
               <button
