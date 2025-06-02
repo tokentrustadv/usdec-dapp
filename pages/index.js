@@ -92,11 +92,25 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center p-4"
+      className="min-h-screen w-full bg-cover bg-center bg-no-repeat flex items-center justify-center p-4"
       style={{ backgroundImage: "url('/koru-bg-wide.png')" }}
     >
-      <div className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-sm text-center">
+      <div className="bg-white bg-opacity-90 backdrop-blur-md rounded-2xl shadow-2xl p-6 max-w-md w-full text-center">
+        <div className="mb-4">
+          <Image
+            src="/usdec-brandtrans.png"
+            alt="USDEC Logo"
+            width={160}
+            height={160}
+          />
+          <p className="text-xs italic text-gray-700 mt-2">
+            (pronounced “US Deck”)<br />
+            A Stablecoin for the Creator Economy
+          </p>
+        </div>
+
         <ConnectButton />
+
         {isConnected && (
           <div className="mt-4">
             <input
@@ -129,7 +143,7 @@ export default function Home() {
 
             <div className="mt-4">
               <strong>USDEC Balance:</strong>{' '}
-              {balanceData ? `${balanceData.formatted}` : '...'}
+              {balanceData ? `${balanceData.formatted}` : '0.0000'}
             </div>
 
             {remaining && (
