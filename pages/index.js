@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
 import usdecAbi from '../usdecAbi.json';
 
-const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65'; // your deployed contract
+const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -23,7 +23,6 @@ export default function Home() {
   const isValidAmount =
     !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
 
-  // Mint prep
   const { config } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -43,39 +42,26 @@ export default function Home() {
     },
   });
 
-  // USDEC balance
-  const { data: rawBalance } = useContractRead({
-    address: USDEC_ADDRESS,
-    abi: usdecAbi,
-    functionName: 'balanceOf',
-    args: [address],
-    enabled: isConnected,
+  const { data: balanceData } = useBalance({
+    address,
+    token: USDEC_ADDRESS,
     watch: true,
+    enabled: isConnected,
   });
 
-  const formattedBalance = rawBalance
-    ? (parseFloat(rawBalance.toString()) / 1e18).toFixed(4)
-    : '0.0000';
-
-  // Optional: Total USDC minted (only works if smart contract has this view)
-  const { data: totalMinted } = useContractRead({
-    address: USDEC_ADDRESS,
-    abi: usdecAbi,
-    functionName: 'userTotalMinted', // ensure this exists in your contract
-    args: [address],
-    enabled: isConnected,
-    watch: true,
-  });
-
-  const formattedTotalMinted = totalMinted
-    ? (parseFloat(totalMinted.toString()) / 1e6).toFixed(2)
-    : '0.0000';
-
-  // Redemption logic
   const { data: mintTimestamp } = useContractRead({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'userMintTimestamp',
+    args: [address],
+    enabled: isConnected,
+    watch: true,
+  });
+
+  const { data: totalMinted } = useContractRead({
+    address: USDEC_ADDRESS,
+    abi: usdecAbi,
+    functionName: 'userTotalMinted',
     args: [address],
     enabled: isConnected,
     watch: true,
@@ -95,8 +81,12 @@ export default function Home() {
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'redeem',
-    args: rawBalance ? [rawBalance] : [0n],
-    enabled: isConnected && rawBalance && rawBalance > 0 && canRedeem,
+    args: [
+      balanceData
+        ? BigInt(Math.floor(parseFloat(balanceData.formatted) * 1e18))
+        : 0n,
+    ],
+    enabled: isConnected && balanceData && parseFloat(balanceData.formatted) > 0 && canRedeem,
   });
 
   const { write: redeemWrite, isLoading: isRedeeming } = useContractWrite({
@@ -109,121 +99,113 @@ export default function Home() {
     },
   });
 
-  // Debug
-  console.log("Connected wallet:", address);
-  console.log("Raw USDEC balance:", rawBalance?.toString());
-  console.log("Total minted:", totalMinted?.toString());
-
   return (
-    <div className="min-h-screen flex flex-col items-center p-4" style={{ backgroundColor: '#4B4B4B' }}>
-      <div className="flex flex-col items-center mb-6">
+    <div className="relative min-h-screen w-full text-white">
+      {/* Background */}
+      <div className="absolute inset-0 z-0">
         <Image
-          src="/usdec-brandtrans.png"
-          alt="USDEC Logo"
-          width={160}
-          height={160}
+          src="/koru-bg.png"
+          alt="Background"
+          layout="fill"
+          objectFit="cover"
+          quality={100}
         />
-        <p className="text-sm italic text-white">
-          (pronounced “US Deck”)<br />
-          A Stablecoin for the Creator Economy
-        </p>
+        <div className="absolute inset-0 bg-black bg-opacity-60" />
       </div>
 
-      <div className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
-        <ConnectButton />
-        {isConnected && (
-          <div className="mt-4">
-            <input
-              type="number"
-              placeholder="Amount (Max 500 USDC)"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              min="0"
-              step="0.01"
-              className="w-full p-2 border border-gray-300 rounded mb-2"
+      {/* Overlay Text */}
+      <div className="absolute top-8 w-full flex justify-center z-10">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center drop-shadow-lg">
+          Koru — A New Loop in Creator Finance Begins Here
+        </h1>
+      </div>
+
+      {/* Main Panel */}
+      <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4">
+        <div className="backdrop-blur-md bg-white/10 border border-white/20 shadow-2xl rounded-2xl p-6 w-full max-w-sm text-center">
+          <div className="flex flex-col items-center mb-4">
+            <Image
+              src="/usdec-brandtrans.png"
+              alt="USDEC Logo"
+              width={140}
+              height={140}
             />
+            <p className="text-sm italic mt-1 text-gray-200">
+              (pronounced “US Deck”)<br />
+              A Stablecoin for the Creator Economy
+            </p>
+          </div>
 
-            {isValidAmount && (
-              <p className="text-sm text-gray-600 mb-2">
-                Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
-              </p>
-            )}
+          <ConnectButton />
 
-            <button
-              onClick={() => write?.()}
-              disabled={!write || isLoading || !isValidAmount}
-              className={`w-full p-2 rounded text-white ${
-                !write || isLoading || !isValidAmount
-                  ? 'bg-gray-400'
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
-              {isLoading ? 'Minting...' : 'Mint USDEC'}
-            </button>
+          {isConnected && (
+            <div className="mt-4 text-white">
+              <input
+                type="number"
+                placeholder="Amount (Max 500 USDC)"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                min="0"
+                step="0.01"
+                className="w-full p-2 border border-gray-300 text-black rounded mb-2"
+              />
 
-            <div className="mt-4">
-              <strong>USDEC Balance:</strong> {formattedBalance}
-            </div>
+              {isValidAmount && (
+                <p className="text-sm text-gray-300 mb-2">
+                  Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
+                </p>
+              )}
 
-            <div className="mt-1">
-              <strong>Total USDC Minted:</strong> {formattedTotalMinted}
-            </div>
-
-            {remaining && (
-              <p className="text-sm mt-2 text-gray-700">
-                Redemption available {remaining}
-              </p>
-            )}
-
-            {canRedeem && redeemWrite && (
               <button
-                onClick={() => redeemWrite?.()}
-                disabled={isRedeeming}
-                className={`w-full mt-2 p-2 rounded text-white ${
-                  isRedeeming ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'
+                onClick={() => write?.()}
+                disabled={!write || isLoading || !isValidAmount}
+                className={`w-full p-2 rounded font-semibold ${
+                  !write || isLoading || !isValidAmount
+                    ? 'bg-gray-500 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
-                {isRedeeming ? 'Redeeming...' : 'Redeem USDEC'}
+                {isLoading ? 'Minting...' : 'Mint USDEC'}
               </button>
-            )}
 
-            {txHash && (
-              <div className="mt-2">
-                <a
-                  href={`https://sepolia.basescan.org/tx/${txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline text-sm"
-                >
-                  View Transaction
-                </a>
+              <div className="mt-4 space-y-1 text-sm">
+                <div><strong>USDEC Balance:</strong> {balanceData ? `${balanceData.formatted}` : '0.0000'}</div>
+                <div><strong>Total USDC Minted:</strong> {totalMinted ? `${(Number(totalMinted) / 1e6).toFixed(4)}` : '0.0000'}</div>
               </div>
-            )}
-          </div>
-        )}
-      </div>
 
-      <div className="bg-white shadow-lg rounded-2xl p-6 w-full max-w-sm text-center border-2 border-[#0399C4]">
-        <div className="flex justify-center mb-4">
-          <Image
-            src="/morpho-logo.svg"
-            alt="Morpho Logo"
-            width={120}
-            height={32}
-          />
+              {remaining && (
+                <p className="text-sm mt-2 text-gray-300">
+                  Redemption available {remaining}
+                </p>
+              )}
+
+              {canRedeem && redeemWrite && (
+                <button
+                  onClick={() => redeemWrite?.()}
+                  disabled={isRedeeming}
+                  className={`w-full mt-2 p-2 rounded text-white ${
+                    isRedeeming ? 'bg-gray-500' : 'bg-green-600 hover:bg-green-700'
+                  }`}
+                >
+                  {isRedeeming ? 'Redeeming...' : 'Redeem USDEC'}
+                </button>
+              )}
+
+              {txHash && (
+                <div className="mt-2">
+                  <a
+                    href={`https://sepolia.basescan.org/tx/${txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-300 hover:underline text-xs"
+                  >
+                    View Transaction
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-        <h2 className="text-xl font-semibold text-[#0399C4] mb-2">
-          Earn Yield with Morpho
-        </h2>
-        <p className="text-gray-600 text-sm mb-4">
-          Stake USDC to earn passive yield. Powered by Morpho’s secure DeFi protocol.
-        </p>
-        <button
-          disabled
-          className="w-full p-2 rounded bg-[#0399C4] text-white font-semibold opacity-60 cursor-not-allowed"
-        >
-          Coming Soon
-        </button>
       </div>
     </div>
   );
