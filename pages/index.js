@@ -92,18 +92,18 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen w-full bg-cover bg-center bg-no-repeat flex items-center justify-center p-4"
+      className="min-h-screen w-full bg-cover bg-center bg-no-repeat flex items-center justify-center"
       style={{ backgroundImage: "url('/koru-bg-wide.png')" }}
     >
-      <div className="bg-white bg-opacity-90 backdrop-blur-md rounded-2xl shadow-2xl p-6 max-w-md w-full text-center">
+      <div className="bg-white bg-opacity-90 backdrop-blur-md rounded-xl shadow-2xl p-5 w-full max-w-sm text-center">
         <div className="mb-4">
           <Image
             src="/usdec-brandtrans.png"
             alt="USDEC Logo"
-            width={160}
-            height={160}
+            width={140}
+            height={140}
           />
-          <p className="text-xs italic text-gray-700 mt-2">
+          <p className="text-xs italic text-gray-700 mt-1 leading-tight">
             (pronounced “US Deck”)<br />
             A Stablecoin for the Creator Economy
           </p>
@@ -112,7 +112,7 @@ export default function Home() {
         <ConnectButton />
 
         {isConnected && (
-          <div className="mt-4">
+          <div className="mt-4 space-y-2">
             <input
               type="number"
               placeholder="Amount (Max 500 USDC)"
@@ -120,11 +120,11 @@ export default function Home() {
               onChange={(e) => setAmount(e.target.value)}
               min="0"
               step="0.01"
-              className="w-full p-2 border border-gray-300 rounded mb-2"
+              className="w-full p-2 border border-gray-300 rounded text-sm"
             />
 
             {isValidAmount && (
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-xs text-gray-600">
                 Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
               </p>
             )}
@@ -132,7 +132,7 @@ export default function Home() {
             <button
               onClick={() => write?.()}
               disabled={!write || isLoading || !isValidAmount}
-              className={`w-full p-2 rounded text-white ${
+              className={`w-full p-2 rounded text-white text-sm ${
                 !write || isLoading || !isValidAmount
                   ? 'bg-gray-400'
                   : 'bg-blue-600 hover:bg-blue-700'
@@ -141,23 +141,19 @@ export default function Home() {
               {isLoading ? 'Minting...' : 'Mint USDEC'}
             </button>
 
-            <div className="mt-4">
-              <strong>USDEC Balance:</strong>{' '}
-              {balanceData ? `${balanceData.formatted}` : '0.0000'}
+            <div className="text-sm text-gray-700 mt-2">
+              <div><strong>USDEC Balance:</strong> {balanceData ? balanceData.formatted : '0.0000'}</div>
+              {remaining && <div><strong>Redemption:</strong> {remaining}</div>}
             </div>
-
-            {remaining && (
-              <p className="text-sm mt-2 text-gray-700">
-                Redemption available {remaining}
-              </p>
-            )}
 
             {canRedeem && redeemWrite && (
               <button
                 onClick={() => redeemWrite?.()}
                 disabled={isRedeeming}
                 className={`w-full mt-2 p-2 rounded text-white ${
-                  isRedeeming ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'
+                  isRedeeming
+                    ? 'bg-gray-400'
+                    : 'bg-green-600 hover:bg-green-700'
                 }`}
               >
                 {isRedeeming ? 'Redeeming...' : 'Redeem USDEC'}
@@ -165,12 +161,12 @@ export default function Home() {
             )}
 
             {txHash && (
-              <div className="mt-2">
+              <div className="text-xs mt-2">
                 <a
                   href={`https://sepolia.basescan.org/tx/${txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline text-sm"
+                  className="text-blue-600 hover:underline"
                 >
                   View Transaction
                 </a>
