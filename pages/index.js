@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
 import usdecAbi from '../usdecAbi.json';
 
-const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65'; // your deployed contract
+const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65'; // deployed contract
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -58,9 +58,10 @@ export default function Home() {
     watch: true,
   });
 
-  const unlockTime = mintTimestamp
-    ? new Date(Number(mintTimestamp) * 1000 + 30 * 24 * 60 * 60 * 1000)
-    : null;
+  const unlockTime =
+    mintTimestamp && typeof mintTimestamp === 'bigint'
+      ? new Date(Number(mintTimestamp.toString()) * 1000 + 30 * 24 * 60 * 60 * 1000)
+      : null;
 
   const remaining = unlockTime
     ? formatDistanceToNowStrict(unlockTime, { addSuffix: true })
@@ -137,15 +138,14 @@ export default function Home() {
               {isLoading ? 'Minting...' : 'Mint USDEC'}
             </button>
 
-            <div className="mt-4">
-              <strong>USDEC Balance:</strong>{' '}
-              {balanceData ? `${balanceData.formatted} USDEC` : '...'}
-            </div>
-
-            {remaining && (
-              <p className="text-sm mt-2 text-gray-700">
-                Redemption available {remaining}
-              </p>
+            {balanceData && (
+              <div className="mt-4 text-sm text-gray-700">
+                <p><strong>USDEC Balance:</strong> {balanceData.formatted}</p>
+                <p><strong>Total USDC Minted:</strong> {balanceData.formatted}</p>
+                {remaining && (
+                  <p><strong>Redemption Available:</strong> {remaining}</p>
+                )}
+              </div>
             )}
 
             {canRedeem && redeemWrite && (
