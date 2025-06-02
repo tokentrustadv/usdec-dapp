@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
 import usdecAbi from '../usdecAbi.json';
 
-const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65'; // Base Sepolia
+const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -58,15 +58,6 @@ export default function Home() {
     watch: true,
   });
 
-  const { data: totalMintedData } = useContractRead({
-    address: USDEC_ADDRESS,
-    abi: usdecAbi,
-    functionName: 'userTotalMinted',
-    args: [address],
-    enabled: isConnected,
-    watch: true,
-  });
-
   const unlockTime = mintTimestamp
     ? new Date(Number(mintTimestamp) * 1000 + 30 * 24 * 60 * 60 * 1000)
     : null;
@@ -86,8 +77,7 @@ export default function Home() {
         ? BigInt(Math.floor(parseFloat(balanceData.formatted) * 1e18))
         : 0n,
     ],
-    enabled:
-      isConnected && balanceData && parseFloat(balanceData.formatted) > 0 && canRedeem,
+    enabled: isConnected && balanceData && parseFloat(balanceData.formatted) > 0 && canRedeem,
   });
 
   const { write: redeemWrite, isLoading: isRedeeming } = useContractWrite({
@@ -102,126 +92,78 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center bg-no-repeat"
-      style={{
-        backgroundImage: "url('/koru-bg.png')",
-      }}
+      className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center p-4"
+      style={{ backgroundImage: "url('/koru-bg-wide.png')" }}
     >
-      <div className="bg-black bg-opacity-70 min-h-screen flex flex-col items-center p-6 text-white">
-        <div className="flex flex-col items-center mb-6">
-          <Image
-            src="/usdec-brandtrans.png"
-            alt="USDEC Logo"
-            width={160}
-            height={160}
-          />
-          <p className="text-sm italic text-white text-center mt-2">
-            (pronounced “US Deck”)<br />
-            A Stablecoin for the Creator Economy
-          </p>
-        </div>
+      <div className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-sm text-center">
+        <ConnectButton />
+        {isConnected && (
+          <div className="mt-4">
+            <input
+              type="number"
+              placeholder="Amount (Max 500 USDC)"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              min="0"
+              step="0.01"
+              className="w-full p-2 border border-gray-300 rounded mb-2"
+            />
 
-        <div className="bg-white bg-opacity-95 text-black shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
-          <ConnectButton />
-          {isConnected && (
+            {isValidAmount && (
+              <p className="text-sm text-gray-600 mb-2">
+                Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
+              </p>
+            )}
+
+            <button
+              onClick={() => write?.()}
+              disabled={!write || isLoading || !isValidAmount}
+              className={`w-full p-2 rounded text-white ${
+                !write || isLoading || !isValidAmount
+                  ? 'bg-gray-400'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
+            >
+              {isLoading ? 'Minting...' : 'Mint USDEC'}
+            </button>
+
             <div className="mt-4">
-              <input
-                type="number"
-                placeholder="Amount (Max 500 USDC)"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min="0"
-                step="0.01"
-                className="w-full p-2 border border-gray-300 rounded mb-2"
-              />
+              <strong>USDEC Balance:</strong>{' '}
+              {balanceData ? `${balanceData.formatted}` : '...'}
+            </div>
 
-              {isValidAmount && (
-                <p className="text-sm text-gray-600 mb-2">
-                  Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
-                </p>
-              )}
+            {remaining && (
+              <p className="text-sm mt-2 text-gray-700">
+                Redemption available {remaining}
+              </p>
+            )}
 
+            {canRedeem && redeemWrite && (
               <button
-                onClick={() => write?.()}
-                disabled={!write || isLoading || !isValidAmount}
-                className={`w-full p-2 rounded text-white ${
-                  !write || isLoading || !isValidAmount
-                    ? 'bg-gray-400'
-                    : 'bg-blue-600 hover:bg-blue-700'
+                onClick={() => redeemWrite?.()}
+                disabled={isRedeeming}
+                className={`w-full mt-2 p-2 rounded text-white ${
+                  isRedeeming ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'
                 }`}
               >
-                {isLoading ? 'Minting...' : 'Mint USDEC'}
+                {isRedeeming ? 'Redeeming...' : 'Redeem USDEC'}
               </button>
+            )}
 
-              <div className="mt-4 text-sm">
-                <div>
-                  <strong>USDEC Balance:</strong>{' '}
-                  {balanceData ? `${balanceData.formatted}` : '...'}
-                </div>
-                <div>
-                  <strong>Total USDC Minted:</strong>{' '}
-                  {totalMintedData
-                    ? (Number(totalMintedData) / 1e6).toFixed(2)
-                    : '...'}
-                </div>
-              </div>
-
-              {remaining && (
-                <p className="text-sm mt-2 text-gray-700">
-                  Redemption available {remaining}
-                </p>
-              )}
-
-              {canRedeem && redeemWrite && (
-                <button
-                  onClick={() => redeemWrite?.()}
-                  disabled={isRedeeming}
-                  className={`w-full mt-2 p-2 rounded text-white ${
-                    isRedeeming ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'
-                  }`}
+            {txHash && (
+              <div className="mt-2">
+                <a
+                  href={`https://sepolia.basescan.org/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline text-sm"
                 >
-                  {isRedeeming ? 'Redeeming...' : 'Redeem USDEC'}
-                </button>
-              )}
-
-              {txHash && (
-                <div className="mt-2">
-                  <a
-                    href={`https://sepolia.basescan.org/tx/${txHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline text-sm"
-                  >
-                    View Transaction
-                  </a>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="bg-white bg-opacity-90 text-black shadow-lg rounded-2xl p-6 w-full max-w-sm text-center border-2 border-[#0399C4]">
-          <div className="flex justify-center mb-4">
-            <Image
-              src="/morpho-logo.svg"
-              alt="Morpho Logo"
-              width={120}
-              height={32}
-            />
+                  View Transaction
+                </a>
+              </div>
+            )}
           </div>
-          <h2 className="text-xl font-semibold text-[#0399C4] mb-2">
-            Earn Yield with Morpho
-          </h2>
-          <p className="text-gray-600 text-sm mb-4">
-            Stake USDC to earn passive yield. Powered by Morpho’s secure DeFi protocol.
-          </p>
-          <button
-            disabled
-            className="w-full p-2 rounded bg-[#0399C4] text-white font-semibold opacity-60 cursor-not-allowed"
-          >
-            Coming Soon
-          </button>
-        </div>
+        )}
       </div>
     </div>
   );
