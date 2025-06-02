@@ -12,7 +12,7 @@ import toast from 'react-hot-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
 import usdecAbi from '../usdecAbi.json';
 
-const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65';
+const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65'; // your deployed contract
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -23,6 +23,7 @@ export default function Home() {
   const isValidAmount =
     !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
 
+  // Mint prep
   const { config } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -42,6 +43,7 @@ export default function Home() {
     },
   });
 
+  // USDEC balance
   const { data: rawBalance } = useContractRead({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -52,9 +54,24 @@ export default function Home() {
   });
 
   const formattedBalance = rawBalance
-    ? (Number(rawBalance) / 1e18).toFixed(4)
+    ? (parseFloat(rawBalance.toString()) / 1e18).toFixed(4)
     : '0.0000';
 
+  // Optional: Total USDC minted (only works if smart contract has this view)
+  const { data: totalMinted } = useContractRead({
+    address: USDEC_ADDRESS,
+    abi: usdecAbi,
+    functionName: 'userTotalMinted', // ensure this exists in your contract
+    args: [address],
+    enabled: isConnected,
+    watch: true,
+  });
+
+  const formattedTotalMinted = totalMinted
+    ? (parseFloat(totalMinted.toString()) / 1e6).toFixed(2)
+    : '0.0000';
+
+  // Redemption logic
   const { data: mintTimestamp } = useContractRead({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -79,7 +96,7 @@ export default function Home() {
     abi: usdecAbi,
     functionName: 'redeem',
     args: rawBalance ? [rawBalance] : [0n],
-    enabled: isConnected && rawBalance && rawBalance > 0n && canRedeem,
+    enabled: isConnected && rawBalance && rawBalance > 0 && canRedeem,
   });
 
   const { write: redeemWrite, isLoading: isRedeeming } = useContractWrite({
@@ -92,9 +109,10 @@ export default function Home() {
     },
   });
 
-  console.log('Wallet:', address);
-  console.log('USDEC Raw Balance:', rawBalance?.toString());
-  console.log('Mint Timestamp:', mintTimestamp);
+  // Debug
+  console.log("Connected wallet:", address);
+  console.log("Raw USDEC balance:", rawBalance?.toString());
+  console.log("Total minted:", totalMinted?.toString());
 
   return (
     <div className="min-h-screen flex flex-col items-center p-4" style={{ backgroundColor: '#4B4B4B' }}>
@@ -105,7 +123,7 @@ export default function Home() {
           width={160}
           height={160}
         />
-        <p className="text-sm italic text-white text-center">
+        <p className="text-sm italic text-white">
           (pronounced “US Deck”)<br />
           A Stablecoin for the Creator Economy
         </p>
@@ -143,13 +161,19 @@ export default function Home() {
               {isLoading ? 'Minting...' : 'Mint USDEC'}
             </button>
 
-            <div className="mt-4 text-sm text-gray-700">
-              <p><strong>USDEC Balance:</strong> {formattedBalance}</p>
-              <p><strong>Total USDC Minted:</strong> {formattedBalance}</p>
-              {remaining && (
-                <p><strong>Redemption Available:</strong> {remaining}</p>
-              )}
+            <div className="mt-4">
+              <strong>USDEC Balance:</strong> {formattedBalance}
             </div>
+
+            <div className="mt-1">
+              <strong>Total USDC Minted:</strong> {formattedTotalMinted}
+            </div>
+
+            {remaining && (
+              <p className="text-sm mt-2 text-gray-700">
+                Redemption available {remaining}
+              </p>
+            )}
 
             {canRedeem && redeemWrite && (
               <button
