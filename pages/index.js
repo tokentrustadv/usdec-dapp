@@ -3,7 +3,6 @@ import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
   useAccount,
-  useBalance,
   useContractWrite,
   useContractRead,
   usePrepareContractWrite,
@@ -12,7 +11,7 @@ import toast from 'react-hot-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
 import usdecAbi from '../usdecAbi.json';
 
-const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65'; // deployed contract
+const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -42,12 +41,19 @@ export default function Home() {
     },
   });
 
-  const { data: balanceData } = useBalance({
-    address,
-    token: USDEC_ADDRESS,
-    watch: true,
+  // ✅ NEW: Use balanceOf instead of useBalance
+  const { data: rawBalance } = useContractRead({
+    address: USDEC_ADDRESS,
+    abi: usdecAbi,
+    functionName: 'balanceOf',
+    args: [address],
     enabled: isConnected,
+    watch: true,
   });
+
+  const formattedBalance = rawBalance
+    ? (Number(rawBalance.toString()) / 1e18).toFixed(4)
+    : null;
 
   const { data: mintTimestamp } = useContractRead({
     address: USDEC_ADDRESS,
@@ -74,11 +80,9 @@ export default function Home() {
     abi: usdecAbi,
     functionName: 'redeem',
     args: [
-      balanceData
-        ? BigInt(Math.floor(parseFloat(balanceData.formatted) * 1e18))
-        : 0n,
+      rawBalance ? BigInt(rawBalance.toString()) : 0n,
     ],
-    enabled: isConnected && balanceData && parseFloat(balanceData.formatted) > 0 && canRedeem,
+    enabled: isConnected && rawBalance && rawBalance > 0 && canRedeem,
   });
 
   const { write: redeemWrite, isLoading: isRedeeming } = useContractWrite({
@@ -138,10 +142,10 @@ export default function Home() {
               {isLoading ? 'Minting...' : 'Mint USDEC'}
             </button>
 
-            {balanceData && (
+            {formattedBalance && (
               <div className="mt-4 text-sm text-gray-700">
-                <p><strong>USDEC Balance:</strong> {balanceData.formatted}</p>
-                <p><strong>Total USDC Minted:</strong> {balanceData.formatted}</p>
+                <p><strong>USDEC Balance:</strong> {formattedBalance}</p>
+                <p><strong>Total USDC Minted:</strong> {formattedBalance}</p>
                 {remaining && (
                   <p><strong>Redemption Available:</strong> {remaining}</p>
                 )}
