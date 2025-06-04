@@ -1,19 +1,18 @@
+// pages/_app.js
 import '../styles.css';
+import '@rainbow-me/rainbowkit/styles.css';
 import { getDefaultWallets, RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { configureChains, createConfig, WagmiConfig } from 'wagmi';
 import { jsonRpcProvider } from 'wagmi/providers/jsonRpc';
 import { publicProvider } from 'wagmi/providers/public';
 import { baseSepolia } from 'wagmi/chains';
 import { Toaster } from 'react-hot-toast';
-import '@rainbow-me/rainbowkit/styles.css';
 
 const { chains, publicClient } = configureChains(
   [baseSepolia],
   [
     jsonRpcProvider({
-      rpc: () => ({
-        http: 'https://sepolia.base.org',
-      }),
+      rpc: () => ({ http: 'https://sepolia.base.org' }),
     }),
     publicProvider(),
   ]
@@ -21,7 +20,7 @@ const { chains, publicClient } = configureChains(
 
 const { connectors } = getDefaultWallets({
   appName: 'USDEC',
-  projectId: 'ced749b38222900677e11e8d3b875b2e', // your WalletConnect Project ID
+  projectId: 'ced749b38222900677e11e8d3b875b2e',
   chains,
 });
 
@@ -35,7 +34,9 @@ export default function App({ Component, pageProps }) {
   return (
     <WagmiConfig config={wagmiConfig}>
       <RainbowKitProvider chains={chains}>
-        <Component {...pageProps} />
+        <main className="font-sans">
+          <Component {...pageProps} />
+        </main>
         <Toaster position="top-right" />
       </RainbowKitProvider>
     </WagmiConfig>
