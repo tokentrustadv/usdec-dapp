@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Head from 'next/head';
 import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
@@ -56,23 +55,14 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-between p-4 text-white"
+      className="min-h-screen bg-cover bg-center flex flex-col items-center p-4"
       style={{
         backgroundImage: "url('/koru-bg-wide.png')",
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        fontFamily: 'DM Sans, sans-serif',
       }}
     >
-      <Head>
-        <title>USDEC</title>
-        <link
-          href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap"
-          rel="stylesheet"
-        />
-      </Head>
-
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
         <Image
           src="/usdec-brandtrans.png"
@@ -86,7 +76,7 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center text-black mb-10">
+      <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
         <ConnectButton />
         {isConnected && (
           <div className="mt-4">
@@ -138,24 +128,36 @@ export default function Home() {
         )}
       </div>
 
-      <footer className="w-full text-center bg-black bg-opacity-60 p-6 rounded-xl max-w-3xl mb-10">
-        <div className="mb-4">
-          <Image
-            src="/morpho-logo.svg"
-            alt="Morpho Logo"
-            width={120}
-            height={40}
-            className="mx-auto"
-          />
-          <p className="text-sm italic mt-2 text-white">Yield powered by Morpho</p>
-        </div>
+      {/* Morpho Logo */}
+      <div className="mb-2">
+        <Image
+          src="/morpho-logo.svg"
+          alt="Morpho Logo"
+          width={100}
+          height={30}
+        />
+      </div>
 
-        <p className="text-sm text-white px-4 leading-relaxed">
-          <strong>Koru</strong> is Jeff Bezos’ 127-meter sailing yacht, named after the Māori word for “loop” or “coil.” 
-          The Koru symbolizes new beginnings, continuous growth, and renewal. It reflects not only a transition from old systems 
-          to new ones, but a commitment to design, simplicity, and signal. Just like USDEC.
-        </p>
-      </footer>
+      {/* Koru Info Block */}
+      <div className="w-full max-w-3xl mt-4 flex justify-center px-4">
+        <div
+          className="rounded-xl text-white text-sm text-center p-4"
+          style={{
+            background: 'linear-gradient(180deg, rgba(87,146,255,0.25) 0%, rgba(87,146,255,0.15) 100%)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+          }}
+        >
+          <p className="mb-2 font-medium">About Koru</p>
+          <p>
+            Jeff Bezos’ yacht is named <strong>Koru</strong>, a Māori word meaning “loop” or “spiral.” It symbolizes growth, renewal, and new beginnings — fitting for a stablecoin designed to empower creators to own their economy.
+            <br /><br />
+            Built in 2023, the yacht represents a turning point for those who see creation, not consumption, as the future.
+            <br /><br />
+            <em>USDEC is built with that same mindset: sovereign, elegant, forward.</em>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
