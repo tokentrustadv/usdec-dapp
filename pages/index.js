@@ -55,7 +55,7 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center flex flex-col items-center p-4"
+      className="min-h-screen bg-cover bg-center flex flex-col items-center p-4 font-sans"
       style={{
         backgroundImage: "url('/koru-bg-wide.png')",
         backgroundRepeat: 'no-repeat',
@@ -129,20 +129,20 @@ export default function Home() {
       </div>
 
       {/* Yield + Koru Story Section */}
-      <div className="bg-black bg-opacity-70 text-white text-center rounded-xl p-6 max-w-xl mt-4">
+      <div className="bg-black bg-opacity-70 text-white text-center rounded-xl p-6 max-w-xl mt-10 mb-10">
         <Image
           src="/morpho-logo.svg"
           alt="Morpho Logo"
           width={120}
           height={40}
-          className="mx-auto mb-2"
+          className="mx-auto mb-4"
         />
-        <p className="text-sm italic">Yield powered by Morpho</p>
-        <p className="mt-4 text-sm leading-relaxed">
-          Koru, the name of Jeff Bezos’ 127-meter sailing yacht, means “loop” or “coil” in the Māori language. 
-          It symbolizes new beginnings, continuous movement, and the return to origin — fitting for creators 
-          reclaiming control in this evolving digital economy. Built in 2023, Koru reflects a shift in power, 
-          where independence and ownership are more than luxuries — they’re necessities. So is this currency.
+        <p className="text-sm italic mb-6">Yield powered by Morpho</p>
+
+        <p className="text-sm leading-relaxed px-2">
+          <strong>Koru</strong>, the name of Jeff Bezos’ 127-meter sailing yacht, means “loop” or “coil” in the Māori language. 
+          It represents perpetual growth, renewal, and new beginnings — fitting for a stablecoin designed to serve the Creator Economy.
+          Built in 2023, Koru reflects a shift from centralized empires to creator-led networks. It’s not just a vessel. It’s a signal.
         </p>
       </div>
     </div>
