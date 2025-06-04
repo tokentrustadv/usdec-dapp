@@ -56,23 +56,23 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-between p-4 font-sans text-white"
+      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-between p-4 text-white"
       style={{
         backgroundImage: "url('/koru-bg-wide.png')",
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
+        fontFamily: 'DM Sans, sans-serif',
       }}
     >
-      {/* Head: Add DM Sans font */}
       <Head>
+        <title>USDEC</title>
         <link
-          href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap"
           rel="stylesheet"
         />
       </Head>
 
-      {/* Header Section */}
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
         <Image
           src="/usdec-brandtrans.png"
@@ -86,7 +86,6 @@ export default function Home() {
         </p>
       </div>
 
-      {/* Minting Form */}
       <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center text-black mb-10">
         <ConnectButton />
         {isConnected && (
@@ -139,8 +138,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Footer Section */}
-      <footer className="w-full text-center bg-black bg-opacity-60 p-6 rounded-xl max-w-3xl mb-6">
+      <footer className="w-full text-center bg-black bg-opacity-60 p-6 rounded-xl max-w-3xl mb-10">
         <div className="mb-4">
           <Image
             src="/morpho-logo.svg"
@@ -151,11 +149,11 @@ export default function Home() {
           />
           <p className="text-sm italic mt-2 text-white">Yield powered by Morpho</p>
         </div>
-        <p className="text-sm leading-relaxed text-white px-4">
-          <strong>Koru</strong>, Jeff Bezos’ 127-meter sailing yacht, symbolizes “new beginnings” in the Māori language. 
-          The spiral form of the koru represents growth, harmony, and infinite potential — a fitting metaphor for USDEC and 
-          the emerging economy it supports. Built in 2023, Koru reflects a transition from centralized empires to 
-          decentralized creator-led systems. It's not just a yacht — it's a signal.
+
+        <p className="text-sm text-white px-4 leading-relaxed">
+          <strong>Koru</strong> is Jeff Bezos’ 127-meter sailing yacht, named after the Māori word for “loop” or “coil.” 
+          The Koru symbolizes new beginnings, continuous growth, and renewal. It reflects not only a transition from old systems 
+          to new ones, but a commitment to design, simplicity, and signal. Just like USDEC.
         </p>
       </footer>
     </div>
