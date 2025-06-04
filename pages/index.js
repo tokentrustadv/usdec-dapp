@@ -139,25 +139,26 @@ export default function Home() {
       </div>
 
       {/* Koru Info Block */}
-      <div className="w-full max-w-3xl mt-4 flex justify-center px-4">
-        <div
-          className="rounded-xl text-white text-sm text-center p-4"
-          style={{
-            background: 'linear-gradient(180deg, rgba(87,146,255,0.25) 0%, rgba(87,146,255,0.15) 100%)',
-            backdropFilter: 'blur(6px)',
-            WebkitBackdropFilter: 'blur(6px)',
-          }}
-        >
-          <p className="mb-2 font-medium">About Koru</p>
-          <p>
-            Jeff Bezos’ yacht is named <strong>Koru</strong>, a Māori word meaning “loop” or “spiral.” It symbolizes growth, renewal, and new beginnings — fitting for a stablecoin designed to empower creators to own their economy.
-            <br /><br />
-            Built in 2023, the yacht represents a turning point for those who see creation, not consumption, as the future.
-            <br /><br />
-            <em>USDEC is built with that same mindset: sovereign, elegant, forward.</em>
-          </p>
-        </div>
-      </div>
+<div className="w-full max-w-3xl mt-4 flex justify-center px-4">
+  <div
+    className="rounded-xl text-white text-sm text-center p-4"
+    style={{
+      background: 'linear-gradient(180deg, rgba(87,146,255,0.25) 0%, rgba(87,146,255,0.15) 100%)',
+      backdropFilter: 'blur(6px)',
+      WebkitBackdropFilter: 'blur(6px)',
+      color: 'white', // Ensure text remains white
+    }}
+  >
+    <p className="mb-2 font-medium text-white">About Koru</p>
+    <p className="text-white">
+      Jeff Bezos’ yacht is named <strong>Koru</strong>, a Māori word meaning “loop” or “spiral.” It symbolizes growth, renewal, and new beginnings — fitting for a stablecoin designed to empower creators to own their economy.
+      <br /><br />
+      Built in 2023, the yacht represents a turning point for those who see creation, not consumption, as the future.
+      <br /><br />
+      <em>USDEC is built with that same mindset: sovereign, elegant, forward.</em>
+    </p>
+  </div>
+</div>
     </div>
   );
 }
