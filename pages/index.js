@@ -55,14 +55,10 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center flex flex-col items-center p-4"
-      style={{
-        backgroundImage: "url('/koru-bg-wide.png')",
-        backgroundRepeat: 'no-repeat',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }}
+      className="min-h-screen bg-cover bg-center flex flex-col items-center justify-between"
+      style={{ backgroundImage: "url('/koru-bg-wide.png')" }}
     >
+      {/* Header */}
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
         <Image
           src="/usdec-brandtrans.png"
@@ -76,7 +72,8 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
+      {/* Main Mint UI */}
+      <div className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6 bg-opacity-95">
         <ConnectButton />
         {isConnected && (
           <div className="mt-4">
@@ -127,6 +124,26 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* Footer */}
+      <footer className="w-full bg-white bg-opacity-80 py-6 mt-8">
+        <div className="flex flex-col items-center justify-center">
+          <Image
+            src="/morpho-logo.svg"
+            alt="Morpho Logo"
+            width={140}
+            height={40}
+          />
+          <p className="text-sm text-gray-800 mt-2">
+            Yield powered by Morpho. Coming soon.
+          </p>
+          <div className="flex space-x-4 mt-2 text-xs text-blue-600">
+            <a href="https://tokentrust.substack.com" target="_blank" rel="noopener noreferrer">Newsletter</a>
+            <a href="https://chipmahoney.com" target="_blank" rel="noopener noreferrer">About</a>
+            <a href="https://sepolia.basescan.org/address/0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65" target="_blank" rel="noopener noreferrer">Contract</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
