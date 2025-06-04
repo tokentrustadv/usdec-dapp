@@ -55,7 +55,7 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen bg-cover bg-center flex flex-col justify-between items-center p-4"
+      className="min-h-screen bg-cover bg-center flex flex-col items-center p-4"
       style={{
         backgroundImage: "url('/koru-bg-wide.png')",
         backgroundRepeat: 'no-repeat',
@@ -63,7 +63,6 @@ export default function Home() {
         backgroundPosition: 'center',
       }}
     >
-      {/* Header */}
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
         <Image
           src="/usdec-brandtrans.png"
@@ -77,7 +76,6 @@ export default function Home() {
         </p>
       </div>
 
-      {/* Mint Form */}
       <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
         <ConnectButton />
         {isConnected && (
@@ -130,22 +128,22 @@ export default function Home() {
         )}
       </div>
 
-      {/* Footer */}
-      <div className="mt-4 mb-4 flex flex-col items-center opacity-90 bg-black bg-opacity-50 px-4 py-2 rounded-xl">
+      {/* Yield + Koru Story Section */}
+      <div className="bg-black bg-opacity-70 text-white text-center rounded-xl p-6 max-w-xl mt-4">
         <Image
           src="/morpho-logo.svg"
           alt="Morpho Logo"
-          width={100}
+          width={120}
           height={40}
+          className="mx-auto mb-2"
         />
-        <p className="text-xs text-white mt-1">
-          Yield powered by Morpho — Coming soon
+        <p className="text-sm italic">Yield powered by Morpho</p>
+        <p className="mt-4 text-sm leading-relaxed">
+          Koru, the name of Jeff Bezos’ 127-meter sailing yacht, means “loop” or “coil” in the Māori language. 
+          It symbolizes new beginnings, continuous movement, and the return to origin — fitting for creators 
+          reclaiming control in this evolving digital economy. Built in 2023, Koru reflects a shift in power, 
+          where independence and ownership are more than luxuries — they’re necessities. So is this currency.
         </p>
-        <div className="flex space-x-4 text-xs text-blue-200 mt-1">
-          <a href="https://tokentrust.substack.com" target="_blank" rel="noopener noreferrer">Newsletter</a>
-          <a href="https://chipmahoney.com" target="_blank" rel="noopener noreferrer">About</a>
-          <a href="https://sepolia.basescan.org/address/0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65" target="_blank" rel="noopener noreferrer">Contract</a>
-        </div>
       </div>
     </div>
   );
