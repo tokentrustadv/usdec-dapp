@@ -56,7 +56,12 @@ export default function Home() {
   return (
     <div
       className="min-h-screen bg-cover bg-center flex flex-col items-center p-4"
-      style={{ backgroundImage: "url('/koru-bg-wide.png')" }}
+      style={{
+        backgroundImage: "url('/koru-bg-wide.png')",
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
     >
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
         <Image
@@ -71,7 +76,7 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="bg-white shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6 bg-opacity-95">
+      <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
         <ConnectButton />
         {isConnected && (
           <div className="mt-4">
