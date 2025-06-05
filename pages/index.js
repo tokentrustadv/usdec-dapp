@@ -139,24 +139,33 @@ export default function Home() {
         )}
       </div>
 
-      {/* Morpho Vault Stats */}
-      <div className="bg-white bg-opacity-80 backdrop-blur-sm rounded-2xl p-4 w-full max-w-sm mt-6 text-sm text-gray-800 shadow-lg">
-        <h3 className="font-semibold text-lg mb-2">📊 Morpho Vault Stats</h3>
+      {/* Morpho Logo and Info Block */}
+      <div className="bg-white bg-opacity-80 backdrop-blur-sm rounded-2xl p-4 w-full max-w-sm mt-6 text-sm text-gray-800 shadow-lg flex flex-col items-center">
+        <Image
+          src="/morpho-logo.svg"
+          alt="Morpho Logo"
+          width={120}
+          height={40}
+          className="mb-2"
+        />
         <p><strong>Total Deposited:</strong> 500 USDC</p>
         <p><strong>Estimated APY:</strong> 5.43%</p>
-        <p><strong>Vault Strategy:</strong> Morpho Blue auto-lending</p>
         <a
           href="https://app.morpho.org/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 hover:underline mt-2 inline-block"
+          className="text-blue-600 hover:underline mt-2 text-sm"
         >
-          View on Morpho
+          Morpho Blue
         </a>
       </div>
 
-      {/* Koru Section */}
-      <div className="mt-10 p-4 bg-[#5792ff] bg-opacity-70 rounded-xl w-full max-w-sm text-white text-sm leading-relaxed shadow-lg">
+      {/* Koru Footer */}
+      <div className="mt-10 p-4 w-full max-w-sm text-white text-sm leading-relaxed shadow-lg rounded-xl"
+        style={{
+          background: 'linear-gradient(135deg, #5792ff 0%, #005bff 100%)',
+        }}
+      >
         <h3 className="text-lg font-semibold mb-2">The Koru Symbol</h3>
         <p>
           The yacht featured in this Dapp is named <strong>Koru</strong>, built in 2023 and owned by Jeff Bezos.
