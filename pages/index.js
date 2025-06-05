@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
@@ -16,6 +16,8 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
+  const [recentTxs, setRecentTxs] = useState([]);
+  const [mintDate, setMintDate] = useState(null);
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount =
@@ -33,6 +35,11 @@ export default function Home() {
     ...config,
     onSuccess(data) {
       setTxHash(data.hash);
+      setMintDate(new Date());
+      setRecentTxs((prev) => [
+        { hash: data.hash, amount: parsedAmount, timestamp: new Date() },
+        ...prev.slice(0, 2),
+      ]);
       toast.success('Minted successfully!');
     },
     onError(error) {
@@ -49,9 +56,27 @@ export default function Home() {
     watch: true,
   });
 
+  const { data: totalSupply } = useContractRead({
+    address: USDEC_ADDRESS,
+    abi: usdecAbi,
+    functionName: 'totalSupply',
+    watch: true,
+  });
+
   const formattedBalance = balance
     ? (Number(balance) / 1e6).toFixed(4)
     : '0.0000';
+
+  const formattedSupply = totalSupply
+    ? (Number(totalSupply) / 1e6).toFixed(2)
+    : '0.00';
+
+  const getRedeemDate = () => {
+    if (!mintDate) return null;
+    const redeemDate = new Date(mintDate);
+    redeemDate.setDate(redeemDate.getDate() + 30);
+    return redeemDate.toDateString();
+  };
 
   return (
     <div
@@ -61,7 +86,6 @@ export default function Home() {
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        fontFamily: "'Helvetica Neue', 'FK Grotesk', sans-serif",
       }}
     >
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
@@ -125,44 +149,46 @@ export default function Home() {
                 </a>
               </div>
             )}
+
+            {mintDate && (
+              <div className="mt-4 text-sm text-gray-700">
+                <p>Mint Date: {mintDate.toDateString()}</p>
+                <p>Redeemable After: {getRedeemDate()}</p>
+              </div>
+            )}
           </div>
         )}
-      </div>
 
-      {/* Footer */}
-      <div className="w-full max-w-2xl text-center mt-auto text-white text-sm px-4">
-        <p className="mb-2">
-          Yield powered by{' '}
-          <a
-            href="https://app.morpho.org"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline text-blue-300"
-          >
-            Morpho
-          </a>
-        </p>
-
-        <p className="mb-2 text-xs">
-          Mint date: June 5, 2025 • Available for redemption in 30 days
-        </p>
-
-        <div
-          className="rounded-xl p-4 mt-6"
-          style={{
-            background: 'linear-gradient(to right, #5792ff, #79b5ff)',
-            color: 'white',
-          }}
-        >
-          <h3 className="font-bold mb-1">The Koru Symbol</h3>
-          <p className="text-xs leading-relaxed">
-            Jeff Bezos' yacht is named <em>Koru</em>, inspired by the Māori word for “loop” or “coil.”
-            It symbolizes new beginnings, growth, and harmony — a fitting metaphor
-            for a stablecoin economy that empowers creators and rewards early adopters. USDEC is a vessel
-            built for the next era of value creation.
-          </p>
+        <div className="mt-6 text-sm text-gray-800">
+          <p><strong>Total USDEC Minted:</strong> {formattedSupply}</p>
+          {recentTxs.length > 0 && (
+            <div className="mt-2">
+              <p className="font-semibold">Recent Mints:</p>
+              <ul className="text-sm mt-1">
+                {recentTxs.map((tx, index) => (
+                  <li key={index}>
+                    {tx.amount} USDC on {tx.timestamp.toLocaleDateString()}{' '}
+                    <a
+                      href={`https://sepolia.basescan.org/tx/${tx.hash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline"
+                    >
+                      view
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
+
+      <footer className="mt-6 w-full text-center p-6" style={{ background: 'linear-gradient(to top, #5792ff, transparent)' }}>
+        <p className="text-white text-sm max-w-xl mx-auto">
+          <strong>The Koru Symbol</strong> — Jeff Bezos' yacht, Koru, is named after the Māori word meaning "loop" or "coil," symbolizing new beginnings. The design echoes the unfolding of a silver fern frond and is often associated with growth, renewal, and the creator’s journey forward.
+        </p>
+      </footer>
     </div>
   );
 }
