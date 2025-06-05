@@ -61,6 +61,7 @@ export default function Home() {
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
+        fontFamily: "'Helvetica Neue', 'FK Grotesk', sans-serif",
       }}
     >
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
@@ -128,37 +129,40 @@ export default function Home() {
         )}
       </div>
 
-      {/* Morpho Logo */}
-      <div className="mb-2">
-        <Image
-          src="/morpho-logo.svg"
-          alt="Morpho Logo"
-          width={100}
-          height={30}
-        />
-      </div>
+      {/* Footer */}
+      <div className="w-full max-w-2xl text-center mt-auto text-white text-sm px-4">
+        <p className="mb-2">
+          Yield powered by{' '}
+          <a
+            href="https://app.morpho.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline text-blue-300"
+          >
+            Morpho
+          </a>
+        </p>
 
-      {/* Koru Info Block */}
-<div className="w-full max-w-3xl mt-4 flex justify-center px-4">
-  <div
-    className="rounded-xl text-white text-sm text-center p-4"
-    style={{
-      background: 'linear-gradient(180deg, rgba(87,146,255,0.25) 0%, rgba(87,146,255,0.15) 100%)',
-      backdropFilter: 'blur(6px)',
-      WebkitBackdropFilter: 'blur(6px)',
-      color: 'white', // Ensure text remains white
-    }}
-  >
-    <p className="mb-2 font-medium text-white">About Koru</p>
-    <p className="text-white">
-      Jeff Bezos’ yacht is named <strong>Koru</strong>, a Māori word meaning “loop” or “spiral.” It symbolizes growth, renewal, and new beginnings — fitting for a stablecoin designed to empower creators to own their economy.
-      <br /><br />
-      Built in 2023, the yacht represents a turning point for those who see creation, not consumption, as the future.
-      <br /><br />
-      <em>USDEC is built with that same mindset: sovereign, elegant, forward.</em>
-    </p>
-  </div>
-</div>
+        <p className="mb-2 text-xs">
+          Mint date: June 5, 2025 • Available for redemption in 30 days
+        </p>
+
+        <div
+          className="rounded-xl p-4 mt-6"
+          style={{
+            background: 'linear-gradient(to right, #5792ff, #79b5ff)',
+            color: 'white',
+          }}
+        >
+          <h3 className="font-bold mb-1">The Koru Symbol</h3>
+          <p className="text-xs leading-relaxed">
+            Jeff Bezos' yacht is named <em>Koru</em>, inspired by the Māori word for “loop” or “coil.”
+            It symbolizes new beginnings, growth, and harmony — a fitting metaphor
+            for a stablecoin economy that empowers creators and rewards early adopters. USDEC is a vessel
+            built for the next era of value creation.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
