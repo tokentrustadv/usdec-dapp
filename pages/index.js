@@ -51,29 +51,15 @@ export default function Home() {
     watch: true,
   });
 
-  const { data: totalSupply } = useContractRead({
-    address: USDEC_ADDRESS,
-    abi: usdecAbi,
-    functionName: 'totalSupply',
-    watch: true,
-  });
-
   const formattedBalance = balance
     ? (Number(balance) / 1e6).toFixed(4)
     : '0.0000';
 
-  const formattedSupply = totalSupply
-    ? (Number(totalSupply) / 1e6).toFixed(2)
-    : '0.00';
-
-  const redemptionStart = new Date('2025-06-05');
-  const redemptionEnd = new Date(redemptionStart);
-  redemptionEnd.setDate(redemptionStart.getDate() + 30);
-  const redemptionDate = redemptionEnd.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const redemptionDate = () => {
+    const now = new Date();
+    now.setDate(now.getDate() + 30);
+    return now.toLocaleDateString();
+  };
 
   return (
     <div
@@ -83,7 +69,7 @@ export default function Home() {
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        fontFamily: "'Helvetica Neue', 'FK Grotesk', sans-serif",
+        fontFamily: "'Helvetica Neue', FK Grotesk, sans-serif",
       }}
     >
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
@@ -92,6 +78,13 @@ export default function Home() {
           alt="USDEC Logo"
           width={160}
           height={160}
+        />
+        <Image
+          src="/morpho-logo.svg"
+          alt="Morpho Logo"
+          width={120}
+          height={60}
+          className="mt-3"
         />
         <p className="text-sm italic text-white text-center mt-2">
           (pronounced “US Deck”)<br />
@@ -114,7 +107,7 @@ export default function Home() {
             />
 
             {isValidAmount && (
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-gray-600 mb-2 font-bold">
                 Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
               </p>
             )}
@@ -132,7 +125,7 @@ export default function Home() {
             </button>
 
             <div className="mt-4">
-              <strong>Your Balance:</strong> {formattedBalance}
+              <strong>USDEC Balance:</strong> {formattedBalance}
             </div>
 
             {txHash && (
@@ -147,57 +140,55 @@ export default function Home() {
                 </a>
               </div>
             )}
+
+            <div className="mt-4 text-sm text-gray-800">
+              <strong>Redemption Available:</strong> {redemptionDate()}
+            </div>
+
+            <div className="mt-4 text-sm text-gray-800">
+              <strong>Recent Mints:</strong>
+              <ul className="list-disc list-inside mt-2 text-left">
+                {recentTxs.length === 0 && <li>No recent mints</li>}
+                {recentTxs.map((tx, index) => (
+                  <li key={index}>
+                    <a
+                      href={`https://sepolia.basescan.org/tx/${tx}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      Tx #{index + 1}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
       </div>
 
-      <div className="bg-white bg-opacity-90 rounded-xl p-4 w-full max-w-md mb-6 text-sm text-center">
-        <p><strong>Total USDEC Minted:</strong> {formattedSupply}</p>
-        <p><strong>Redemption Available:</strong> {redemptionDate}</p>
-        {recentTxs.length > 0 && (
-          <div className="mt-3">
-            <p className="font-semibold">Recent Transactions:</p>
-            {recentTxs.map((tx, idx) => (
-              <div key={idx}>
-                <a
-                  href={`https://sepolia.basescan.org/tx/${tx}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  {tx.slice(0, 10)}...
-                </a>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div
-        className="w-full py-6 mt-4"
+      <div className="w-full max-w-2xl mt-6 p-4 rounded-xl text-white text-sm"
         style={{
-          background: 'linear-gradient(to bottom, rgba(87, 146, 255, 0.05), rgba(87, 146, 255, 0.25))',
+          background: 'linear-gradient(to right, rgba(87, 146, 255, 0.25), rgba(87, 146, 255, 0.25))',
         }}
       >
-        <div className="flex flex-col items-center text-white">
-          <Image
-            src="/morpho-logo.svg"
-            alt="Morpho Logo"
-            width={120}
-            height={32}
-            className="mb-2"
-          />
+        <div className="flex flex-col items-center">
           <a
-            href="https://app.morpho.org/"
+            href="https://app.morpho.org"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-200 hover:underline mb-4"
+            className="text-white font-semibold hover:underline mb-2"
           >
             Morpho Blue
           </a>
-          <p className="text-sm px-6 text-white text-center max-w-3xl leading-relaxed">
-            <strong>The Koru Symbol</strong><br />
-            Koru, the name of Jeff Bezos' yacht, is inspired by the Māori symbol representing new beginnings, growth, and the perpetual loop of renewal. It reflects the purpose of this vault — an evolving opportunity for creators and backers to Own the Economy in new ways. USDEC is not just a token — it's an invitation.
+          <h2 className="text-lg font-semibold mt-4 mb-2">The Koru Symbol</h2>
+          <p className="text-white text-center max-w-xl">
+            Koru is the Māori word for "loop" and is based on the spiral shape
+            of a new unfurling silver fern frond. The symbol conveys the idea of
+            new life, growth, strength and peace. The yacht “Koru” was built by
+            Oceanco and delivered in 2023. It represents not only renewal, but
+            the elegant evolution of design — values mirrored in the foundation
+            of USDEC and its focus on creators.
           </p>
         </div>
       </div>
