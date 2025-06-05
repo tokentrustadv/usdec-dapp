@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
@@ -16,7 +16,6 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
-  const [recentTxs, setRecentTxs] = useState([]);
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount =
@@ -35,7 +34,6 @@ export default function Home() {
     onSuccess(data) {
       setTxHash(data.hash);
       toast.success('Minted successfully!');
-      setRecentTxs((prev) => [data.hash, ...prev.slice(0, 2)]);
     },
     onError(error) {
       toast.error(error.message || 'Transaction failed');
@@ -55,18 +53,15 @@ export default function Home() {
     ? (Number(balance) / 1e6).toFixed(4)
     : '0.0000';
 
-  const redemptionDate = new Date();
-  redemptionDate.setDate(redemptionDate.getDate() + 30);
-
   return (
     <div
-      className="min-h-screen bg-cover bg-center flex flex-col items-center p-4 text-white"
+      className="min-h-screen bg-cover bg-center flex flex-col items-center p-4"
       style={{
         backgroundImage: "url('/koru-bg-wide.png')",
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        fontFamily: "'Helvetica Neue', 'FK Grotesk', sans-serif",
+        fontFamily: 'sans-serif',
       }}
     >
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
@@ -76,12 +71,13 @@ export default function Home() {
           width={160}
           height={160}
         />
-        <div className="self-start mt-2">
+        <div className="flex items-center mt-4 w-full justify-start">
           <Image
             src="/morpho-logo.svg"
             alt="Morpho Logo"
             width={80}
-            height={20}
+            height={32}
+            className="mr-2"
           />
         </div>
         <p className="text-sm italic text-white text-center mt-2">
@@ -90,7 +86,7 @@ export default function Home() {
         </p>
       </div>
 
-      <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6 text-black">
+      <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
         <ConnectButton />
         {isConnected && (
           <div className="mt-4">
@@ -105,7 +101,7 @@ export default function Home() {
             />
 
             {isValidAmount && (
-              <p className="text-sm text-gray-800 mb-2 font-bold">
+              <p className="text-sm text-gray-800 font-bold mb-2">
                 Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
               </p>
             )}
@@ -122,76 +118,50 @@ export default function Home() {
               {isLoading ? 'Minting...' : 'Mint USDEC'}
             </button>
 
-            <div className="mt-4 font-semibold">
-              <div>USDEC Balance: {formattedBalance}</div>
-              {txHash && (
-                <div className="mt-2 text-sm">
-                  <a
-                    href={`https://sepolia.basescan.org/tx/${txHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    View Mint Transaction
-                  </a>
-                </div>
-              )}
+            <div className="mt-4">
+              <strong>USDEC Balance:</strong> {formattedBalance}
             </div>
 
-            <div className="mt-4 text-sm text-gray-800">
-              Redemption Available:{' '}
-              <span className="font-bold">
-                {redemptionDate.toLocaleDateString()}
-              </span>
-            </div>
-
-            {recentTxs.length > 0 && (
-              <div className="mt-4 text-sm text-gray-800">
-                <strong>Recent Mints:</strong>
-                <ul className="list-disc list-inside text-left mt-1">
-                  {recentTxs.map((hash, i) => (
-                    <li key={i}>
-                      <a
-                        href={`https://sepolia.basescan.org/tx/${hash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
-                      >
-                        {hash.slice(0, 12)}...
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+            {txHash && (
+              <div className="mt-2">
+                <a
+                  href={`https://sepolia.basescan.org/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline text-sm"
+                >
+                  View Transaction
+                </a>
               </div>
             )}
 
-            <div className="mt-6 flex justify-center items-center space-x-4">
+            <div className="mt-4 text-sm text-white">
               <a
                 href="https://app.morpho.org"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-700 font-semibold hover:underline"
+                className="text-blue-300 underline"
               >
-                Morpho Blue
+                Morpho Blue Est. APY: ~4.5%
               </a>
-              <span className="text-sm text-gray-700">Est. APY: ~5.3%</span>
             </div>
           </div>
         )}
       </div>
 
-      <footer className="w-full max-w-2xl mt-8 text-sm text-white rounded-xl p-4"
+      <div
+        className="w-full text-center p-4 mt-6 rounded-t-xl"
         style={{
-          background: 'linear-gradient(to right, rgba(87,146,255,0.15), rgba(87,146,255,0.15))',
+          background: 'linear-gradient(to top, rgba(87,146,255,0.3), rgba(87,146,255,0.05))',
         }}
       >
-        <h3 className="text-white font-bold mb-2">The Koru Symbol</h3>
-        <p className="text-white leading-relaxed">
-          The yacht featured in the background is named <strong>Koru</strong>, built for Jeff Bezos in 2023. 
-          The word “Koru” is a Māori term for a looped spiral — a symbol of new beginnings, 
-          peace, and perpetual movement. This reflects the mission behind USDEC — to offer creators a fresh, stable foundation for economic freedom and growth.
+        <h2 className="text-lg font-semibold text-white">The Koru Symbol</h2>
+        <p className="text-white mt-2 text-sm max-w-2xl mx-auto">
+          The koru is a Māori symbol representing the unfurling fern frond — a loop that conveys growth, new beginnings, and perpetual movement. 
+          Our background image, inspired by Jeff Bezos’ yacht “Koru,” symbolizes a journey powered by design and purpose. 
+          The stablecoin you just minted flows with this same spirit — always anchored, yet always expanding.
         </p>
-      </footer>
+      </div>
     </div>
   );
 }
