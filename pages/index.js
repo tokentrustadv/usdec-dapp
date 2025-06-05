@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
@@ -16,6 +16,7 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
+  const [recentTxs, setRecentTxs] = useState([]);
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount =
@@ -33,6 +34,7 @@ export default function Home() {
     ...config,
     onSuccess(data) {
       setTxHash(data.hash);
+      setRecentTxs((prev) => [data.hash, ...prev.slice(0, 2)]);
       toast.success('Minted successfully!');
     },
     onError(error) {
@@ -49,13 +51,29 @@ export default function Home() {
     watch: true,
   });
 
+  const { data: totalSupply } = useContractRead({
+    address: USDEC_ADDRESS,
+    abi: usdecAbi,
+    functionName: 'totalSupply',
+    watch: true,
+  });
+
   const formattedBalance = balance
     ? (Number(balance) / 1e6).toFixed(4)
     : '0.0000';
 
-  const mintDate = new Date('2025-06-05');
-  const redemptionDate = new Date(mintDate);
-  redemptionDate.setDate(mintDate.getDate() + 30);
+  const formattedSupply = totalSupply
+    ? (Number(totalSupply) / 1e6).toFixed(2)
+    : '0.00';
+
+  const redemptionStart = new Date('2025-06-05');
+  const redemptionEnd = new Date(redemptionStart);
+  redemptionEnd.setDate(redemptionStart.getDate() + 30);
+  const redemptionDate = redemptionEnd.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
 
   return (
     <div
@@ -65,7 +83,7 @@ export default function Home() {
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        fontFamily: "'FK Grotesk', sans-serif",
+        fontFamily: "'Helvetica Neue', 'FK Grotesk', sans-serif",
       }}
     >
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
@@ -114,7 +132,7 @@ export default function Home() {
             </button>
 
             <div className="mt-4">
-              <strong>USDEC Balance:</strong> {formattedBalance}
+              <strong>Your Balance:</strong> {formattedBalance}
             </div>
 
             {txHash && (
@@ -129,49 +147,59 @@ export default function Home() {
                 </a>
               </div>
             )}
-
-            <div className="mt-4 text-sm text-gray-700">
-              <p><strong>Mint Date:</strong> {mintDate.toLocaleDateString()}</p>
-              <p><strong>Redeem After:</strong> {redemptionDate.toLocaleDateString()}</p>
-              <p className="text-xs text-gray-500 mt-1 italic">* A 30-day lock applies to all mints.</p>
-            </div>
           </div>
         )}
       </div>
 
-      {/* Morpho Logo and Info Block */}
-      <div className="bg-white bg-opacity-80 backdrop-blur-sm rounded-2xl p-4 w-full max-w-sm mt-6 text-sm text-gray-800 shadow-lg flex flex-col items-center">
-        <Image
-          src="/morpho-logo.svg"
-          alt="Morpho Logo"
-          width={120}
-          height={40}
-          className="mb-2"
-        />
-        <p><strong>Total Deposited:</strong> 500 USDC</p>
-        <p><strong>Estimated APY:</strong> 5.43%</p>
-        <a
-          href="https://app.morpho.org/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 hover:underline mt-2 text-sm"
-        >
-          Morpho Blue
-        </a>
+      <div className="bg-white bg-opacity-90 rounded-xl p-4 w-full max-w-md mb-6 text-sm text-center">
+        <p><strong>Total USDEC Minted:</strong> {formattedSupply}</p>
+        <p><strong>Redemption Available:</strong> {redemptionDate}</p>
+        {recentTxs.length > 0 && (
+          <div className="mt-3">
+            <p className="font-semibold">Recent Transactions:</p>
+            {recentTxs.map((tx, idx) => (
+              <div key={idx}>
+                <a
+                  href={`https://sepolia.basescan.org/tx/${tx}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  {tx.slice(0, 10)}...
+                </a>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Koru Footer */}
-      <div className="mt-10 p-4 w-full max-w-sm text-white text-sm leading-relaxed shadow-lg rounded-xl"
+      <div
+        className="w-full py-6 mt-4"
         style={{
-          background: 'linear-gradient(135deg, #5792ff 0%, #005bff 100%)',
+          background: 'linear-gradient(to bottom, rgba(87, 146, 255, 0.05), rgba(87, 146, 255, 0.25))',
         }}
       >
-        <h3 className="text-lg font-semibold mb-2">The Koru Symbol</h3>
-        <p>
-          The yacht featured in this Dapp is named <strong>Koru</strong>, built in 2023 and owned by Jeff Bezos.
-          The name “Koru” comes from the Māori word for the spiral shape of an unfurling fern frond. It represents
-          new beginnings, perpetual movement, and harmony.
-        </p>
+        <div className="flex flex-col items-center text-white">
+          <Image
+            src="/morpho-logo.svg"
+            alt="Morpho Logo"
+            width={120}
+            height={32}
+            className="mb-2"
+          />
+          <a
+            href="https://app.morpho.org/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-200 hover:underline mb-4"
+          >
+            Morpho Blue
+          </a>
+          <p className="text-sm px-6 text-white text-center max-w-3xl leading-relaxed">
+            <strong>The Koru Symbol</strong><br />
+            Koru, the name of Jeff Bezos' yacht, is inspired by the Māori symbol representing new beginnings, growth, and the perpetual loop of renewal. It reflects the purpose of this vault — an evolving opportunity for creators and backers to Own the Economy in new ways. USDEC is not just a token — it's an invitation.
+          </p>
+        </div>
       </div>
     </div>
   );
