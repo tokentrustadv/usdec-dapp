@@ -10,15 +10,13 @@ import {
 import toast from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
 
-const USDEC_ADDRESS = '0x5F66c05F739FbD5dE34cCB5e60d4269F16Dc6F65';
+const USDEC_ADDRESS = '0xd28Bed330462C05D27096FEd52dBC170c8A2Fa1a';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
   const [mintHistory, setMintHistory] = useState([]);
-  const [mintTimestamp, setMintTimestamp] = useState(null);
-
   const parsedAmount = parseFloat(amount);
   const isValidAmount =
     !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
@@ -36,10 +34,6 @@ export default function Home() {
     onSuccess(data) {
       setTxHash(data.hash);
       toast.success('Minted successfully!');
-      setMintHistory((prev) => [
-        { hash: data.hash, amount: parsedAmount, timestamp: Date.now() },
-        ...prev.slice(0, 2),
-      ]);
     },
     onError(error) {
       toast.error(error.message || 'Transaction failed');
@@ -55,27 +49,28 @@ export default function Home() {
     watch: true,
   });
 
-  const { data: mintTime } = useContractRead({
-    address: USDEC_ADDRESS,
-    abi: usdecAbi,
-    functionName: 'userMintTimestamp',
-    args: [address],
-    enabled: isConnected,
-    watch: true,
-  });
-
-  useEffect(() => {
-    if (mintTime) {
-      setMintTimestamp(Number(mintTime) * 1000); // Convert to ms
-    }
-  }, [mintTime]);
-
   const formattedBalance = balance
     ? (Number(balance) / 1e6).toFixed(4)
     : '0.0000';
 
-  const canRedeem =
-    mintTimestamp && Date.now() - mintTimestamp >= 30 * 24 * 60 * 60 * 1000;
+  useEffect(() => {
+    if (address) {
+      fetch(
+        `https://api-sepolia.basescan.org/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=3&sort=desc`
+      )
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.result) {
+            const recentMints = data.result.filter(
+              (tx) =>
+                tx.to.toLowerCase() === USDEC_ADDRESS.toLowerCase() &&
+                tx.input.startsWith('0x1249c58b') // method id for mint()
+            );
+            setMintHistory(recentMints);
+          }
+        });
+    }
+  }, [address]);
 
   return (
     <div
@@ -152,49 +147,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* Redemption Notice */}
-      {mintTimestamp && (
-        <div className="text-left max-w-xl text-sm text-white mb-4 px-4 bg-black bg-opacity-40 rounded-lg py-2">
-          <p>
-            USDEC can be redeemed 30 days after mint.{' '}
-            {canRedeem ? (
-              <span className="font-semibold text-green-300">Eligible now</span>
-            ) : (
-              <span className="text-yellow-200">
-                Available on:{' '}
-                {new Date(mintTimestamp + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
-              </span>
-            )}
-          </p>
-          <p className="mt-1 text-white">
-            A single redeem call will return all eligible amounts.
-          </p>
-        </div>
-      )}
-
-      {/* Last 3 Transactions */}
-      {mintHistory.length > 0 && (
-        <div className="bg-black bg-opacity-40 p-4 rounded-lg text-white text-sm max-w-xl w-full mb-4">
-          <p className="font-semibold mb-2">Recent Transactions</p>
-          <ul className="list-disc pl-4">
-            {mintHistory.map((tx, i) => (
-              <li key={i} className="mb-1">
-                {tx.amount} USDC —{' '}
-                <a
-                  href={`https://sepolia.basescan.org/tx/${tx.hash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline text-blue-300"
-                >
-                  View
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Morpho Blue section */}
+      {/* Morpho Blue APY */}
       <div className="mb-6 text-center">
         <a
           href="https://app.morpho.org"
@@ -206,17 +159,44 @@ export default function Home() {
         </a>
       </div>
 
-      {/* Footer – The Koru Symbol */}
+      {/* Redemption Notice & History */}
+      <div className="w-full max-w-2xl text-left mb-4 bg-white bg-opacity-70 p-4 rounded-lg">
+        <p className="text-sm text-gray-800 mb-1">
+          USDEC can be redeemed 30 days after mint.
+        </p>
+        <p className="text-sm text-gray-800 mb-3">
+          A single redeem call will return all eligible amounts.
+        </p>
+        {mintHistory.length > 0 && (
+          <div className="text-sm text-gray-800">
+            <p className="font-semibold mb-1">Last 3 Mints:</p>
+            <ul className="list-disc pl-5">
+              {mintHistory.map((tx) => (
+                <li key={tx.hash}>
+                  <a
+                    href={`https://sepolia.basescan.org/tx/${tx.hash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Tx: {tx.hash.slice(0, 10)}... on {new Date(tx.timeStamp * 1000).toLocaleDateString()}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* Koru Footer */}
       <div
         className="w-full max-w-2xl mt-6 p-4 rounded-lg"
         style={{
           background: 'linear-gradient(to right, rgba(87,146,255,0.25), rgba(87,146,255,0.35))',
         }}
       >
-        <h3 className="text-lg font-semibold mb-2" style={{ color: '#4B4B4B' }}>
-          The Koru Symbol
-        </h3>
-        <p className="text-sm leading-relaxed" style={{ color: '#4B4B4B' }}>
+        <h3 className="text-lg font-semibold mb-2 text-[#4B4B4B]">The Koru Symbol</h3>
+        <p className="text-sm leading-relaxed text-[#4B4B4B]">
           The Koru is a spiral derived from the unfurling frond of the silver fern. It symbolizes new life, growth,
           strength and peace. This yacht, named Koru, was built in 2023 and represents a journey toward new beginnings.
           In the creator economy, we honor the same spirit — evolving with purpose and navigating the open seas of
