@@ -61,15 +61,14 @@ export default function Home() {
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        fontFamily: 'sans-serif',
       }}
     >
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
         <Image
           src="/usdec-logo-morpho.png"
-          alt="USDEC Morpho Logo"
-          width={200}
-          height={200}
+          alt="USDEC + Morpho Logo"
+          width={180}
+          height={180}
         />
         <p className="text-sm italic text-white text-center mt-2">
           (pronounced “US Deck”)<br />
@@ -92,7 +91,7 @@ export default function Home() {
             />
 
             {isValidAmount && (
-              <p className="text-sm text-gray-800 font-bold mb-2">
+              <p className="text-sm text-gray-700 mb-2 font-semibold">
                 Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
               </p>
             )}
@@ -125,32 +124,35 @@ export default function Home() {
                 </a>
               </div>
             )}
-
-            <div className="mt-4 text-sm text-white">
-              <a
-                href="https://app.morpho.org"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-300 underline"
-              >
-                Morpho Blue Est. APY: ~4.5%
-              </a>
-            </div>
           </div>
         )}
       </div>
 
+      {/* Morpho Blue section */}
+      <div className="mb-6 text-center">
+        <a
+          href="https://app.morpho.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 font-medium hover:underline"
+        >
+          Morpho Blue Est. APY: ~5.2%
+        </a>
+      </div>
+
+      {/* Footer – The Koru Symbol */}
       <div
-        className="w-full text-center p-4 mt-6 rounded-t-xl"
+        className="w-full max-w-2xl mt-6 p-4 rounded-lg text-white text-sm leading-relaxed"
         style={{
-          background: 'linear-gradient(to top, rgba(87,146,255,0.3), rgba(87,146,255,0.05))',
+          background: 'linear-gradient(to right, rgba(87,146,255,0.25), rgba(87,146,255,0.35))',
         }}
       >
-        <h2 className="text-lg font-semibold text-white">The Koru Symbol</h2>
-        <p className="text-white mt-2 text-sm max-w-2xl mx-auto">
-          The koru is a Māori symbol representing the unfurling fern frond — a loop that conveys growth, new beginnings, and perpetual movement. 
-          Our background image, inspired by Jeff Bezos’ yacht “Koru,” symbolizes a journey powered by design and purpose. 
-          The stablecoin you just minted flows with this same spirit — always anchored, yet always expanding.
+        <h3 className="text-lg font-semibold mb-2">The Koru Symbol</h3>
+        <p>
+          The Koru is a spiral derived from the unfurling frond of the silver fern. It symbolizes new life, growth,
+          strength and peace. This yacht, named Koru, was built in 2023 and represents a journey toward new beginnings.
+          In the creator economy, we honor the same spirit — evolving with purpose and navigating the open seas of
+          ownership and opportunity.
         </p>
       </div>
     </div>
