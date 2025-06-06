@@ -66,20 +66,11 @@ export default function Home() {
     >
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
         <Image
-          src="/usdec-brandtrans.png"
-          alt="USDEC Logo"
-          width={160}
-          height={160}
+          src="/usdec-logo-morpho.png"
+          alt="USDEC Morpho Logo"
+          width={200}
+          height={200}
         />
-        <div className="flex items-center mt-4 w-full justify-start">
-          <Image
-            src="/morpho-logo.svg"
-            alt="Morpho Logo"
-            width={80}
-            height={32}
-            className="mr-2"
-          />
-        </div>
         <p className="text-sm italic text-white text-center mt-2">
           (pronounced “US Deck”)<br />
           A Stablecoin for the Creator Economy
