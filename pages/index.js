@@ -140,12 +140,12 @@ export default function Home() {
         </a>
       </div>
 
-      {/* Footer – The Koru Symbol */}
+      {/* Footer – The Koru Symbol in Morpho Blue */}
 <div
   className="w-full max-w-2xl mt-6 p-4 rounded-lg"
   style={{
     background: 'linear-gradient(to right, rgba(87,146,255,0.25), rgba(87,146,255,0.35))',
-    color: 'white',
+    color: '#5792ff',
   }}
 >
   <h3 className="text-lg font-semibold mb-2">The Koru Symbol</h3>
