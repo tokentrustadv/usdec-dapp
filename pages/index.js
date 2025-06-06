@@ -16,7 +16,7 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
-  const [mintHistory, setMintHistory] = useState([]);
+  const [canRedeem, setCanRedeem] = useState(false);
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount =
@@ -35,11 +35,6 @@ export default function Home() {
     onSuccess(data) {
       setTxHash(data.hash);
       toast.success('Minted successfully!');
-      const timestamp = new Date().toISOString();
-      setMintHistory((prev) => [
-        { tx: data.hash, amount: parsedAmount, date: timestamp },
-        ...prev.slice(0, 2),
-      ]);
     },
     onError(error) {
       toast.error(error.message || 'Transaction failed');
@@ -55,15 +50,31 @@ export default function Home() {
     watch: true,
   });
 
+  const { write: redeem } = useContractWrite({
+    address: USDEC_ADDRESS,
+    abi: usdecAbi,
+    functionName: 'redeem',
+    onSuccess(data) {
+      toast.success('Redemption initiated.');
+    },
+    onError(error) {
+      toast.error(error.message || 'Redemption failed');
+    },
+  });
+
   const formattedBalance = balance
     ? (Number(balance) / 1e6).toFixed(4)
     : '0.0000';
 
-  const redemptionDate = () => {
-    const date = new Date();
-    date.setDate(date.getDate() + 30);
-    return date.toDateString();
-  };
+  useEffect(() => {
+    if (isConnected) {
+      const now = new Date();
+      const launch = new Date('2025-06-05T00:00:00Z');
+      const diff = now - launch;
+      const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+      setCanRedeem(diff >= thirtyDays);
+    }
+  }, [isConnected]);
 
   return (
     <div
@@ -121,36 +132,36 @@ export default function Home() {
             </button>
 
             <div className="mt-4">
-              <strong>Your USDEC Balance:</strong> {formattedBalance}
+              <strong>USDEC Balance:</strong> {formattedBalance}
             </div>
 
-            <div className="mt-2 text-sm">
-              <strong>Redemption Notice:</strong> Available after 30 days —
-              <br />
-              <span className="text-gray-800 font-semibold">{redemptionDate()}</span>
-            </div>
-
-            {mintHistory.length > 0 && (
-              <div className="mt-4 text-left text-sm">
-                <strong className="block mb-1">Recent Transactions:</strong>
-                <ul className="list-disc list-inside text-gray-700">
-                  {mintHistory.map((tx, index) => (
-                    <li key={index}>
-                      {tx.amount} USDC on {new Date(tx.date).toLocaleDateString()}{' '}
-                      —
-                      <a
-                        href={`https://sepolia.basescan.org/tx/${tx.tx}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline ml-1"
-                      >
-                        View
-                      </a>
-                    </li>
-                  ))}
-                </ul>
+            {txHash && (
+              <div className="mt-2">
+                <a
+                  href={`https://sepolia.basescan.org/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline text-sm"
+                >
+                  View Transaction
+                </a>
               </div>
             )}
+
+            <div className="mt-6 text-sm text-gray-700">
+              <p className="mb-2">
+                USDEC is redeemable 30 days after mint. A single redeem call will return all eligible amounts.
+              </p>
+              <button
+                onClick={() => redeem?.()}
+                disabled={!canRedeem}
+                className={`w-full p-2 rounded text-white ${
+                  canRedeem ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400'
+                }`}
+              >
+                {canRedeem ? 'Redeem USDEC' : 'Not Yet Eligible to Redeem'}
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -171,11 +182,11 @@ export default function Home() {
       <div
         className="w-full max-w-2xl mt-6 p-4 rounded-lg"
         style={{
-          background: 'linear-gradient(to right, rgba(87,146,255,0.3), rgba(87,146,255,0.3))',
+          background: 'linear-gradient(to right, rgba(87,146,255,0.25), rgba(87,146,255,0.35))',
         }}
       >
-        <h3 className="text-lg font-semibold mb-2 text-[#4B4B4B]">The Koru Symbol</h3>
-        <p className="text-sm leading-relaxed text-[#4B4B4B]">
+        <h3 className="text-lg font-semibold mb-2" style={{ color: '#4B4B4B' }}>The Koru Symbol</h3>
+        <p className="text-sm leading-relaxed" style={{ color: '#4B4B4B' }}>
           The Koru is a spiral derived from the unfurling frond of the silver fern. It symbolizes new life, growth,
           strength and peace. This yacht, named Koru, was built in 2023 and represents a journey toward new beginnings.
           In the creator economy, we honor the same spirit — evolving with purpose and navigating the open seas of
