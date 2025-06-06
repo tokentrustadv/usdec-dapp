@@ -141,20 +141,20 @@ export default function Home() {
       </div>
 
       {/* Footer – The Koru Symbol */}
-      <div
-        className="w-full max-w-2xl mt-6 p-4 rounded-lg text-white text-sm leading-relaxed"
-        style={{
-          background: 'linear-gradient(to right, rgba(87,146,255,0.25), rgba(87,146,255,0.35))',
-        }}
-      >
-        <h3 className="text-lg font-semibold mb-2">The Koru Symbol</h3>
-        <p>
-          The Koru is a spiral derived from the unfurling frond of the silver fern. It symbolizes new life, growth,
-          strength and peace. This yacht, named Koru, was built in 2023 and represents a journey toward new beginnings.
-          In the creator economy, we honor the same spirit — evolving with purpose and navigating the open seas of
-          ownership and opportunity.
-        </p>
-      </div>
+<div
+  className="w-full max-w-2xl mt-6 p-4 rounded-lg text-white"
+  style={{
+    background: 'linear-gradient(to right, rgba(87,146,255,0.25), rgba(87,146,255,0.35))',
+  }}
+>
+  <h3 className="text-lg font-semibold mb-2 text-white">The Koru Symbol</h3>
+  <p className="text-sm leading-relaxed text-white">
+    The Koru is a spiral derived from the unfurling frond of the silver fern. It symbolizes new life, growth,
+    strength and peace. This yacht, named Koru, was built in 2023 and represents a journey toward new beginnings.
+    In the creator economy, we honor the same spirit — evolving with purpose and navigating the open seas of
+    ownership and opportunity.
+  </p>
+</div>
     </div>
   );
 }
