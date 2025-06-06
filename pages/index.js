@@ -10,7 +10,7 @@ import {
 import toast from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
 
-const USDEC_ADDRESS = '0xd28Bed330462C05D27096FEd52dBC170c8A2Fa1a';
+const USDEC_ADDRESS = '0xC183Cf44A134893c293228b871cFb581eBe26160';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
