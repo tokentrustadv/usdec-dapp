@@ -16,8 +16,7 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
-  const [txHistory, setTxHistory] = useState([]);
-  const [mintDate, setMintDate] = useState(null);
+  const [mintHistory, setMintHistory] = useState([]);
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount =
@@ -35,12 +34,12 @@ export default function Home() {
     ...config,
     onSuccess(data) {
       setTxHash(data.hash);
-      setMintDate(new Date());
-      setTxHistory((prev) => {
-        const newHistory = [{ hash: data.hash, date: new Date() }, ...prev];
-        return newHistory.slice(0, 3);
-      });
       toast.success('Minted successfully!');
+      const timestamp = new Date().toISOString();
+      setMintHistory((prev) => [
+        { tx: data.hash, amount: parsedAmount, date: timestamp },
+        ...prev.slice(0, 2),
+      ]);
     },
     onError(error) {
       toast.error(error.message || 'Transaction failed');
@@ -60,12 +59,10 @@ export default function Home() {
     ? (Number(balance) / 1e6).toFixed(4)
     : '0.0000';
 
-  // Format redemption date
-  const getRedemptionDate = () => {
-    if (!mintDate) return null;
-    const date = new Date(mintDate);
+  const redemptionDate = () => {
+    const date = new Date();
     date.setDate(date.getDate() + 30);
-    return date.toLocaleDateString();
+    return date.toDateString();
   };
 
   return (
@@ -123,42 +120,31 @@ export default function Home() {
               {isLoading ? 'Minting...' : 'Mint USDEC'}
             </button>
 
-            <div className="mt-4 text-sm">
-              <strong>USDEC Balance:</strong> {formattedBalance}
+            <div className="mt-4">
+              <strong>Your USDEC Balance:</strong> {formattedBalance}
             </div>
 
-            {mintDate && (
-              <div className="mt-2 text-sm text-gray-800 font-medium">
-                ⏳ 30-Day Redemption: {getRedemptionDate()}
-              </div>
-            )}
+            <div className="mt-2 text-sm">
+              <strong>Redemption Notice:</strong> Available after 30 days —
+              <br />
+              <span className="text-gray-800 font-semibold">{redemptionDate()}</span>
+            </div>
 
-            {txHash && (
-              <div className="mt-2">
-                <a
-                  href={`https://sepolia.basescan.org/tx/${txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline text-sm"
-                >
-                  View Transaction
-                </a>
-              </div>
-            )}
-
-            {txHistory.length > 0 && (
-              <div className="mt-4 text-left">
-                <p className="text-sm font-semibold mb-1">Last 3 Transactions:</p>
-                <ul className="text-sm list-disc list-inside">
-                  {txHistory.map((tx, i) => (
-                    <li key={i}>
+            {mintHistory.length > 0 && (
+              <div className="mt-4 text-left text-sm">
+                <strong className="block mb-1">Recent Transactions:</strong>
+                <ul className="list-disc list-inside text-gray-700">
+                  {mintHistory.map((tx, index) => (
+                    <li key={index}>
+                      {tx.amount} USDC on {new Date(tx.date).toLocaleDateString()}{' '}
+                      —
                       <a
-                        href={`https://sepolia.basescan.org/tx/${tx.hash}`}
+                        href={`https://sepolia.basescan.org/tx/${tx.tx}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline"
+                        className="text-blue-600 hover:underline ml-1"
                       >
-                        {tx.hash.slice(0, 10)}... on {tx.date.toLocaleDateString()}
+                        View
                       </a>
                     </li>
                   ))}
@@ -188,10 +174,8 @@ export default function Home() {
           background: 'linear-gradient(to right, rgba(87,146,255,0.3), rgba(87,146,255,0.3))',
         }}
       >
-        <h3 className="text-lg font-semibold mb-2" style={{ color: '#4B4B4B' }}>
-          The Koru Symbol
-        </h3>
-        <p className="text-sm leading-relaxed" style={{ color: '#4B4B4B' }}>
+        <h3 className="text-lg font-semibold mb-2 text-[#4B4B4B]">The Koru Symbol</h3>
+        <p className="text-sm leading-relaxed text-[#4B4B4B]">
           The Koru is a spiral derived from the unfurling frond of the silver fern. It symbolizes new life, growth,
           strength and peace. This yacht, named Koru, was built in 2023 and represents a journey toward new beginnings.
           In the creator economy, we honor the same spirit — evolving with purpose and navigating the open seas of
