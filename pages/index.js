@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
@@ -16,6 +16,8 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
+  const [txHistory, setTxHistory] = useState([]);
+  const [mintDate, setMintDate] = useState(null);
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount =
@@ -33,6 +35,11 @@ export default function Home() {
     ...config,
     onSuccess(data) {
       setTxHash(data.hash);
+      setMintDate(new Date());
+      setTxHistory((prev) => {
+        const newHistory = [{ hash: data.hash, date: new Date() }, ...prev];
+        return newHistory.slice(0, 3);
+      });
       toast.success('Minted successfully!');
     },
     onError(error) {
@@ -52,6 +59,14 @@ export default function Home() {
   const formattedBalance = balance
     ? (Number(balance) / 1e6).toFixed(4)
     : '0.0000';
+
+  // Format redemption date
+  const getRedemptionDate = () => {
+    if (!mintDate) return null;
+    const date = new Date(mintDate);
+    date.setDate(date.getDate() + 30);
+    return date.toLocaleDateString();
+  };
 
   return (
     <div
@@ -108,9 +123,15 @@ export default function Home() {
               {isLoading ? 'Minting...' : 'Mint USDEC'}
             </button>
 
-            <div className="mt-4">
+            <div className="mt-4 text-sm">
               <strong>USDEC Balance:</strong> {formattedBalance}
             </div>
+
+            {mintDate && (
+              <div className="mt-2 text-sm text-gray-800 font-medium">
+                ⏳ 30-Day Redemption: {getRedemptionDate()}
+              </div>
+            )}
 
             {txHash && (
               <div className="mt-2">
@@ -122,6 +143,26 @@ export default function Home() {
                 >
                   View Transaction
                 </a>
+              </div>
+            )}
+
+            {txHistory.length > 0 && (
+              <div className="mt-4 text-left">
+                <p className="text-sm font-semibold mb-1">Last 3 Transactions:</p>
+                <ul className="text-sm list-disc list-inside">
+                  {txHistory.map((tx, i) => (
+                    <li key={i}>
+                      <a
+                        href={`https://sepolia.basescan.org/tx/${tx.hash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:underline"
+                      >
+                        {tx.hash.slice(0, 10)}... on {tx.date.toLocaleDateString()}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
@@ -140,22 +181,23 @@ export default function Home() {
         </a>
       </div>
 
-      {/* Footer – The Koru Symbol in #4B4B4B */}
-<div
-  className="w-full max-w-2xl mt-6 p-4 rounded-lg"
-  style={{
-    background: 'linear-gradient(to right, rgba(87,146,255,0.25), rgba(87,146,255,0.35))',
-    color: '#4B4B4B',
-  }}
->
-  <h3 className="text-lg font-semibold mb-2">The Koru Symbol</h3>
-  <p className="text-sm leading-relaxed">
-    The Koru is a spiral derived from the unfurling frond of the silver fern. It symbolizes new life, growth,
-    strength and peace. This yacht, named Koru, was built in 2023 and represents a journey toward new beginnings.
-    In the creator economy, we honor the same spirit — evolving with purpose and navigating the open seas of
-    ownership and opportunity.
-  </p>
-</div>
+      {/* Footer – The Koru Symbol */}
+      <div
+        className="w-full max-w-2xl mt-6 p-4 rounded-lg"
+        style={{
+          background: 'linear-gradient(to right, rgba(87,146,255,0.3), rgba(87,146,255,0.3))',
+        }}
+      >
+        <h3 className="text-lg font-semibold mb-2" style={{ color: '#4B4B4B' }}>
+          The Koru Symbol
+        </h3>
+        <p className="text-sm leading-relaxed" style={{ color: '#4B4B4B' }}>
+          The Koru is a spiral derived from the unfurling frond of the silver fern. It symbolizes new life, growth,
+          strength and peace. This yacht, named Koru, was built in 2023 and represents a journey toward new beginnings.
+          In the creator economy, we honor the same spirit — evolving with purpose and navigating the open seas of
+          ownership and opportunity.
+        </p>
+      </div>
     </div>
   );
 }
