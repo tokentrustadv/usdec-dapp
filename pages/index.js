@@ -145,10 +145,11 @@ export default function Home() {
   className="w-full max-w-2xl mt-6 p-4 rounded-lg"
   style={{
     background: 'linear-gradient(to right, rgba(87,146,255,0.25), rgba(87,146,255,0.35))',
+    color: 'white',
   }}
 >
-  <h3 className="text-lg font-semibold mb-2 text-white !text-white">The Koru Symbol</h3>
-  <p className="text-sm leading-relaxed text-white !text-white">
+  <h3 className="text-lg font-semibold mb-2">The Koru Symbol</h3>
+  <p className="text-sm leading-relaxed">
     The Koru is a spiral derived from the unfurling frond of the silver fern. It symbolizes new life, growth,
     strength and peace. This yacht, named Koru, was built in 2023 and represents a journey toward new beginnings.
     In the creator economy, we honor the same spirit — evolving with purpose and navigating the open seas of
