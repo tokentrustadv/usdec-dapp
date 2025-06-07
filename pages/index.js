@@ -42,6 +42,22 @@ export default function Home() {
     },
   });
 
+  const {
+    write: redeemWrite,
+    isLoading: redeemLoading,
+  } = useContractWrite({
+    address: USDEC_ADDRESS,
+    abi: usdecAbi,
+    functionName: 'redeem',
+    args: [BigInt(0)], // 0 triggers redeemAll logic
+    onSuccess(data) {
+      toast.success('Redeem transaction sent!');
+    },
+    onError(error) {
+      toast.error(error.message || 'Redeem failed');
+    },
+  });
+
   const { data: balance } = useContractRead({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -110,6 +126,18 @@ export default function Home() {
               }`}
             >
               {isLoading ? 'Minting...' : 'Mint USDEC'}
+            </button>
+
+            <button
+              onClick={() => redeemWrite?.()}
+              disabled={!redeemWrite || redeemLoading}
+              className={`mt-2 w-full p-2 rounded text-white ${
+                !redeemWrite || redeemLoading
+                  ? 'bg-gray-400'
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
+            >
+              {redeemLoading ? 'Redeeming...' : 'Redeem USDEC'}
             </button>
 
             <div className="mt-4 text-sm text-gray-800">
