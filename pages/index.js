@@ -10,13 +10,14 @@ import {
 import toast from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
 
-const USDEC_ADDRESS = '0xC183Cf44A134893c293228b871cFb581eBe26160';
+const USDEC_ADDRESS = '0xc183cf44a134893C293228B871CfB581ebE26160';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
-  const [mintHistory, setMintHistory] = useState([]);
+  const [recentTxs, setRecentTxs] = useState([]);
+
   const parsedAmount = parseFloat(amount);
   const isValidAmount =
     !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
@@ -33,6 +34,7 @@ export default function Home() {
     ...config,
     onSuccess(data) {
       setTxHash(data.hash);
+      setRecentTxs((prev) => [data.hash, ...prev.slice(0, 2)]);
       toast.success('Minted successfully!');
     },
     onError(error) {
@@ -53,25 +55,6 @@ export default function Home() {
     ? (Number(balance) / 1e6).toFixed(4)
     : '0.0000';
 
-  useEffect(() => {
-    if (address) {
-      fetch(
-        `https://api-sepolia.basescan.org/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=3&sort=desc`
-      )
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.result) {
-            const recentMints = data.result.filter(
-              (tx) =>
-                tx.to.toLowerCase() === USDEC_ADDRESS.toLowerCase() &&
-                tx.input.startsWith('0x1249c58b') // method id for mint()
-            );
-            setMintHistory(recentMints);
-          }
-        });
-    }
-  }, [address]);
-
   return (
     <div
       className="min-h-screen bg-cover bg-center flex flex-col items-center p-4"
@@ -82,6 +65,7 @@ export default function Home() {
         backgroundPosition: 'center',
       }}
     >
+      {/* Logo */}
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
         <Image
           src="/usdec-logo-morpho.png"
@@ -95,6 +79,7 @@ export default function Home() {
         </p>
       </div>
 
+      {/* Mint Form */}
       <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
         <ConnectButton />
         {isConnected && (
@@ -127,14 +112,14 @@ export default function Home() {
               {isLoading ? 'Minting...' : 'Mint USDEC'}
             </button>
 
-            <div className="mt-4">
+            <div className="mt-4 text-sm text-gray-800">
               <strong>USDEC Balance:</strong> {formattedBalance}
             </div>
 
             {txHash && (
               <div className="mt-2">
                 <a
-                  href={`https://sepolia.basescan.org/tx/${txHash}`}
+                  href={`https://base-sepolia.blockscout.com/tx/${txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline text-sm"
@@ -153,33 +138,33 @@ export default function Home() {
           href="https://app.morpho.org"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-500 font-medium hover:underline"
+          className="text-blue-500 font-semibold hover:underline"
         >
           Morpho Blue Est. APY: ~5.2%
         </a>
       </div>
 
-      {/* Redemption Notice & History */}
-      <div className="w-full max-w-2xl text-left mb-4 bg-white bg-opacity-70 p-4 rounded-lg">
-        <p className="text-sm text-gray-800 mb-1">
-          USDEC can be redeemed 30 days after mint.
+      {/* Redemption Notice + Recent TXs */}
+      <div className="bg-white bg-opacity-90 p-4 rounded-lg max-w-md w-full mb-6">
+        <h4 className="text-sm font-semibold text-gray-700">
+          🔁 30-Day Redemption Notice
+        </h4>
+        <p className="text-xs text-gray-700 mb-2">
+          USDEC can be redeemed after 30 days from each mint. A single redeem call will return all eligible amounts.
         </p>
-        <p className="text-sm text-gray-800 mb-3">
-          A single redeem call will return all eligible amounts.
-        </p>
-        {mintHistory.length > 0 && (
-          <div className="text-sm text-gray-800">
-            <p className="font-semibold mb-1">Last 3 Mints:</p>
-            <ul className="list-disc pl-5">
-              {mintHistory.map((tx) => (
-                <li key={tx.hash}>
+        {recentTxs.length > 0 && (
+          <div className="text-xs text-gray-700">
+            <p className="font-semibold">Recent Mints:</p>
+            <ul className="list-disc list-inside">
+              {recentTxs.map((hash, i) => (
+                <li key={i}>
                   <a
-                    href={`https://sepolia.basescan.org/tx/${tx.hash}`}
+                    href={`https://base-sepolia.blockscout.com/tx/${hash}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
+                    className="text-blue-500 hover:underline"
                   >
-                    Tx: {tx.hash.slice(0, 10)}... on {new Date(tx.timeStamp * 1000).toLocaleDateString()}
+                    {hash.slice(0, 12)}...
                   </a>
                 </li>
               ))}
@@ -192,15 +177,19 @@ export default function Home() {
       <div
         className="w-full max-w-2xl mt-6 p-4 rounded-lg"
         style={{
-          background: 'linear-gradient(to right, rgba(87,146,255,0.25), rgba(87,146,255,0.35))',
+          background:
+            'linear-gradient(to right, rgba(87,146,255,0.25), rgba(87,146,255,0.35))',
         }}
       >
-        <h3 className="text-lg font-semibold mb-2 text-[#4B4B4B]">The Koru Symbol</h3>
-        <p className="text-sm leading-relaxed text-[#4B4B4B]">
-          The Koru is a spiral derived from the unfurling frond of the silver fern. It symbolizes new life, growth,
-          strength and peace. This yacht, named Koru, was built in 2023 and represents a journey toward new beginnings.
-          In the creator economy, we honor the same spirit — evolving with purpose and navigating the open seas of
-          ownership and opportunity.
+        <h3 className="text-lg font-semibold mb-2" style={{ color: '#4B4B4B' }}>
+          The Koru Symbol
+        </h3>
+        <p className="text-sm leading-relaxed" style={{ color: '#4B4B4B' }}>
+          The Koru is a spiral derived from the unfurling frond of the silver fern.
+          It symbolizes new life, growth, strength and peace. This yacht, named Koru,
+          was built in 2023 and represents a journey toward new beginnings. In the
+          creator economy, we honor the same spirit — evolving with purpose and
+          navigating the open seas of ownership and opportunity.
         </p>
       </div>
     </div>
