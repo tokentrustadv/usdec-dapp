@@ -162,6 +162,23 @@ export default function Home() {
 
       {/* Morpho Blue APY */}
       <div className="mb-6 text-center">
+        {/* Mock Vault Display (for testing only) */}
+<div className="bg-white bg-opacity-90 shadow-lg rounded-xl p-4 mb-6 max-w-sm w-full">
+  <h3 className="text-md font-semibold text-gray-800 mb-1">Vault Info</h3>
+  <p className="text-sm text-gray-700">Name: Seamless USDC Vault</p>
+  <p className="text-sm text-gray-700">Curator: Gauntlet</p>
+  <p className="text-sm text-gray-700">APY: 5.2%</p>
+  <p className="text-sm text-gray-700">Network: Base (mocked)</p>
+  <p className="text-xs text-blue-600 truncate mt-1">
+    <a
+      href="https://app.morpho.org/base/vault/0x616a4E1db48e22028f6bbf20444Cd3b8e3273738"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      View on Morpho
+    </a>
+  </p>
+</div>
         <a
           href="https://app.morpho.org"
           target="_blank"
