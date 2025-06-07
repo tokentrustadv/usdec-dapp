@@ -49,7 +49,7 @@ export default function Home() {
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'redeem',
-    args: [BigInt(0)], // 0 triggers redeemAll logic
+    args: [BigInt(0)],
     onSuccess(data) {
       toast.success('Redeem transaction sent!');
     },
@@ -81,11 +81,10 @@ export default function Home() {
         backgroundPosition: 'center',
       }}
     >
-      {/* Logo */}
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
         <Image
-          src="/usdec-logo-morpho.png"
-          alt="USDEC + Morpho Logo"
+          src="/usdec-arcadia.png"
+          alt="USDEC + Arcadia Logo"
           width={180}
           height={180}
         />
@@ -95,7 +94,6 @@ export default function Home() {
         </p>
       </div>
 
-      {/* Mint Form */}
       <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
         <ConnectButton />
         {isConnected && (
@@ -160,36 +158,26 @@ export default function Home() {
         )}
       </div>
 
-      {/* Morpho Blue APY */}
+      {/* Arcadia Vault Info */}
       <div className="mb-6 text-center">
-        {/* Mock Vault Display (for testing only) */}
-<div className="bg-white bg-opacity-90 shadow-lg rounded-xl p-4 mb-6 max-w-sm w-full">
-  <h3 className="text-md font-semibold text-gray-800 mb-1">Vault Info</h3>
-  <p className="text-sm text-gray-700">Name: Seamless USDC Vault</p>
-  <p className="text-sm text-gray-700">Curator: Gauntlet</p>
-  <p className="text-sm text-gray-700">APY: 5.2%</p>
-  <p className="text-sm text-gray-700">Network: Base (mocked)</p>
-  <p className="text-xs text-blue-600 truncate mt-1">
-    <a
-      href="https://app.morpho.org/base/vault/0x616a4E1db48e22028f6bbf20444Cd3b8e3273738"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      View on Morpho
-    </a>
-  </p>
-</div>
-        <a
-          href="https://app.morpho.org"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-500 font-semibold hover:underline"
-        >
-          Morpho Blue Est. APY: ~5.2%
-        </a>
+        <div className="bg-white bg-opacity-90 shadow-lg rounded-xl p-4 mb-6 max-w-sm w-full">
+          <h3 className="text-md font-semibold text-gray-800 mb-1">Vault Info</h3>
+          <p className="text-sm text-gray-700">Name: Arcadia USDC Vault</p>
+          <p className="text-sm text-gray-700">Platform: Arcadia Finance</p>
+          <p className="text-sm text-gray-700">APY: 16.7%</p>
+          <p className="text-sm text-gray-700">Network: Base</p>
+          <p className="text-xs text-blue-600 truncate mt-1">
+            <a
+              href="https://arcadia.finance/pool/8453/0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              View on Arcadia
+            </a>
+          </p>
+        </div>
       </div>
 
-      {/* Redemption Notice + Recent TXs */}
       <div className="bg-white bg-opacity-90 p-4 rounded-lg max-w-md w-full mb-6">
         <h4 className="text-sm font-semibold text-gray-700">
           🔁 30-Day Redemption Notice
@@ -218,7 +206,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* Koru Footer */}
       <div
         className="w-full max-w-2xl mt-6 p-4 rounded-lg"
         style={{
