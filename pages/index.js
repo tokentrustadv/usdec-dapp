@@ -1,4 +1,4 @@
-// allowlist.js export const allowedUsers = [ "0x7d21D2fA510d85108b794e4420C094070d12c612".toLowerCase(), // <- your wallet // Add more wallets below ];
+import { allowedUsers } from '../allowlist';
 
 import { useState, useEffect } from 'react'; import Image from 'next/image'; import { ConnectButton } from '@rainbow-me/rainbowkit'; import { useAccount, useContractWrite, useContractRead, usePrepareContractWrite, } from 'wagmi'; import toast from 'react-hot-toast'; import usdecAbi from '../usdecAbi.json'; import { allowedUsers } from '../allowlist';
 
