@@ -1,5 +1,5 @@
 import { allowedUsers } from '../allowlist';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
@@ -21,7 +21,6 @@ export default function Home() {
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
-
   const isAllowed = address ? allowedUsers.includes(address.toLowerCase()) : false;
 
   const { config } = usePrepareContractWrite({
@@ -77,10 +76,6 @@ export default function Home() {
     }}>
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
         <Image src="/usdec-logo-trans.png" alt="USDEC Logo" width={180} height={180} />
-        <p className="text-sm italic text-white text-center mt-2">
-          (pronounced “US Deck”)<br />
-          A Stablecoin for the Creator Economy
-        </p>
       </div>
 
       <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
@@ -108,6 +103,9 @@ export default function Home() {
                     Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
                   </p>
                 )}
+                <p className="text-xs text-gray-600 italic mb-2">
+                  ⏳ USDEC is redeemable after 30 days from mint.
+                </p>
                 <button
                   onClick={() => write?.()}
                   disabled={!write || isLoading || !isValidAmount}
@@ -166,50 +164,22 @@ export default function Home() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              View Today’s APY
+              View Today's APY
             </a>
           </p>
         </div>
       </div>
 
-      <div className="bg-white bg-opacity-90 p-4 rounded-lg max-w-md w-full mb-6">
-        <h4 className="text-sm font-semibold text-gray-700">
-          🔁 30-Day Redemption Notice
-        </h4>
-        <p className="text-xs text-gray-700 mb-2">
-          USDEC can be redeemed after 30 days from each mint. A single redeem call will return all eligible amounts.
-        </p>
-        {recentTxs.length > 0 && (
-          <div className="text-xs text-gray-700">
-            <p className="font-semibold">Recent Mints:</p>
-            <ul className="list-disc list-inside">
-              {recentTxs.map((hash, i) => (
-                <li key={i}>
-                  <a
-                    href={`https://base-sepolia.blockscout.com/tx/${hash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline"
-                  >
-                    {hash.slice(0, 12)}...
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-
       <div
         className="w-full max-w-2xl mt-6 p-4 rounded-lg"
         style={{
-          background: 'linear-gradient(to right, rgba(87,146,255,0.25), rgba(87,146,255,0.35))',
+          background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)',
         }}
       >
-        <h3 className="text-lg font-semibold mb-2" style={{ color: '#bc9c22' }}>
+        <h3 className="text-lg font-semibold mb-2" style={{ color: '#FFFFFF' }}>
           The Koru Symbol
         </h3>
-        <p className="text-sm leading-relaxed" style={{ color: '#4B4B4B' }}>
+        <p className="text-sm leading-relaxed" style={{ color: '#FFFFFF' }}>
           The Koru is a spiral derived from the unfurling frond of the silver fern.
           It symbolizes new life, growth, strength and peace. This yacht, named Koru,
           was built in 2023 and represents a journey toward new beginnings. In the
