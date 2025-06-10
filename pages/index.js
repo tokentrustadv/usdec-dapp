@@ -1,5 +1,5 @@
 import { allowedUsers } from '../allowlist';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
@@ -21,6 +21,7 @@ export default function Home() {
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
+
   const isAllowed = address ? allowedUsers.includes(address.toLowerCase()) : false;
 
   const { config } = usePrepareContractWrite({
@@ -75,7 +76,10 @@ export default function Home() {
       backgroundPosition: 'center',
     }}>
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
-        <Image src="/usdec-logo-trans.png" alt="USDEC Logo" width={180} height={180} />
+        <Image src="/usdec-logo-gold.png" alt="USDEC Logo" width={180} height={180} />
+        <p className="text-xs text-gray-600 italic mb-2">
+          ⏳ redeemable 30 days from mint
+        </p>
       </div>
 
       <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
@@ -103,9 +107,6 @@ export default function Home() {
                     Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
                   </p>
                 )}
-                <p className="text-xs text-gray-600 italic mb-2">
-                  ⏳ USDEC is redeemable after 30 days from mint.
-                </p>
                 <button
                   onClick={() => write?.()}
                   disabled={!write || isLoading || !isValidAmount}
@@ -176,10 +177,10 @@ export default function Home() {
           background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)',
         }}
       >
-        <h3 className="text-lg font-semibold mb-2" style={{ color: '#FFFFFF' }}>
+        <h3 className="text-lg font-semibold mb-2" style={{ color: '#ffffff' }}>
           The Koru Symbol
         </h3>
-        <p className="text-sm leading-relaxed" style={{ color: '#FFFFFF' }}>
+        <p className="text-sm leading-relaxed" style={{ color: '#ffffff' }}>
           The Koru is a spiral derived from the unfurling frond of the silver fern.
           It symbolizes new life, growth, strength and peace. This yacht, named Koru,
           was built in 2023 and represents a journey toward new beginnings. In the
