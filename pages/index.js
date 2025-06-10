@@ -1,5 +1,4 @@
 import { allowedUsers } from '../allowlist';
-
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -77,7 +76,7 @@ export default function Home() {
       backgroundPosition: 'center',
     }}>
       <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
-        <Image src="/usdec-arcadia.png" alt="USDEC + Arcadia Logo" width={180} height={180} />
+        <Image src="/usdec-logo-trans.png" alt="USDEC Logo" width={180} height={180} />
         <p className="text-sm italic text-white text-center mt-2">
           (pronounced “US Deck”)<br />
           A Stablecoin for the Creator Economy
@@ -159,7 +158,7 @@ export default function Home() {
           <h3 className="text-md font-semibold text-gray-800 mb-1">Vault Info</h3>
           <p className="text-sm text-gray-700">Name: Arcadia USDC Vault</p>
           <p className="text-sm text-gray-700">Platform: Arcadia Finance</p>
-          <p className="text-sm text-gray-700">APY: 16.7%</p>
+          <p className="text-sm text-gray-700">APY: Variable</p>
           <p className="text-sm text-gray-700">Network: Base</p>
           <p className="text-xs text-blue-600 truncate mt-1">
             <a
@@ -167,7 +166,7 @@ export default function Home() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              View on Arcadia
+              View Today’s APY
             </a>
           </p>
         </div>
@@ -207,7 +206,7 @@ export default function Home() {
           background: 'linear-gradient(to right, rgba(87,146,255,0.25), rgba(87,146,255,0.35))',
         }}
       >
-        <h3 className="text-lg font-semibold mb-2" style={{ color: '#4B4B4B' }}>
+        <h3 className="text-lg font-semibold mb-2" style={{ color: '#bc9c22' }}>
           The Koru Symbol
         </h3>
         <p className="text-sm leading-relaxed" style={{ color: '#4B4B4B' }}>
