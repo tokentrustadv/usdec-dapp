@@ -13,14 +13,12 @@ import toast from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
 
 const USDEC_ADDRESS = '0xAF48B53F4384c04B3e579A127ABd8d8949a6F645';
-const USDEC_SYMBOL = 'USDEC';
-const USDEC_DECIMALS = 6;
-const USDEC_LOGO = '/usdec-logo-gold.png';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
+  const [recentTxs, setRecentTxs] = useState([]);
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
@@ -38,6 +36,7 @@ export default function Home() {
     ...config,
     onSuccess(data) {
       setTxHash(data.hash);
+      setRecentTxs((prev) => [data.hash, ...prev.slice(0, 2)]);
       toast.success('Minted successfully!');
     },
     onError(error) {
@@ -69,8 +68,8 @@ export default function Home() {
 
   const formattedBalance = balance ? (Number(balance) / 1e6).toFixed(4) : '0.0000';
 
-  const addToWallet = async () => {
-    if (typeof window.ethereum !== 'undefined' && window.ethereum.request) {
+  const addTokenToWallet = async () => {
+    if (window.ethereum) {
       try {
         await window.ethereum.request({
           method: 'wallet_watchAsset',
@@ -78,17 +77,15 @@ export default function Home() {
             type: 'ERC20',
             options: {
               address: USDEC_ADDRESS,
-              symbol: USDEC_SYMBOL,
-              decimals: USDEC_DECIMALS,
-              image: window.location.origin + USDEC_LOGO,
+              symbol: 'USDEC',
+              decimals: 6,
+              image: '/usdec-logo-gold.png',
             },
           },
         });
       } catch (error) {
-        toast.error('Failed to add token to wallet');
+        console.error('Error adding token:', error);
       }
-    } else {
-      toast.error('Wallet not available');
     }
   };
 
@@ -107,7 +104,9 @@ export default function Home() {
       }}>
         <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
           <Image src="/usdec-logo-gold.png" alt="USDEC Logo" width={180} height={180} />
-          <p className="text-xs text-gray-300 italic mb-2">⏳ redeemable 30 days from mint</p>
+          <p className="text-xs text-gray-600 italic mb-2">
+            ⏳ redeemable 30 days from mint
+          </p>
         </div>
 
         <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
@@ -178,9 +177,8 @@ export default function Home() {
               )}
 
               <div className="mt-4 flex justify-center">
-                <button onClick={addToWallet} className="flex items-center gap-2 px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-900">
-                  <Image src="/metamask-icon.png" alt="MetaMask" width={20} height={20} />
-                  USDEC
+                <button onClick={addTokenToWallet} className="bg-transparent">
+                  <Image src="/metamask-icon.png" alt="MetaMask Icon" width={32} height={32} />
                 </button>
               </div>
             </div>
@@ -192,7 +190,6 @@ export default function Home() {
             <h3 className="text-md font-semibold text-gray-800 mb-1">Vault Info</h3>
             <p className="text-sm text-gray-700">Name: Arcadia USDC Vault</p>
             <p className="text-sm text-gray-700">Platform: Arcadia Finance</p>
-            <p className="text-sm text-gray-700">APY: Variable</p>
             <p className="text-sm text-gray-700">Network: Base</p>
             <p className="text-xs text-blue-600 truncate mt-1">
               <a
@@ -212,10 +209,10 @@ export default function Home() {
             background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)',
           }}
         >
-          <h3 className="text-lg font-semibold mb-2" style={{ color: '#ffffff' }}>
+          <h3 className="text-lg font-semibold mb-2 text-white">
             The Koru Symbol
           </h3>
-          <p className="text-sm leading-relaxed" style={{ color: '#ffffff' }}>
+          <p className="text-sm leading-relaxed text-white">
             The Koru is a spiral derived from the unfurling frond of the silver fern.
             It symbolizes new life, growth, strength and peace. This yacht, named Koru,
             was built in 2023 and represents a journey toward new beginnings. In the
