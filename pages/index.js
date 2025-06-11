@@ -177,14 +177,11 @@ export default function Home() {
                 </div>
               )}
 
-              <div className="mt-4 flex justify-center gap-4">
+              <div className="mt-4 flex justify-center">
                 <button onClick={addToWallet} className="flex items-center gap-2 px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-900">
                   <Image src="/metamask-icon.png" alt="MetaMask" width={20} height={20} />
-                  Add USDEC
+                  USDEC
                 </button>
-                <div className="flex items-center">
-                  <Image src="/coinbase-icon.png" alt="Coinbase" width={24} height={24} />
-                </div>
               </div>
             </div>
           )}
@@ -211,10 +208,14 @@ export default function Home() {
 
         <div
           className="w-full max-w-2xl mt-6 p-4 rounded-lg"
-          style={{ background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)' }}
+          style={{
+            background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)',
+          }}
         >
-          <h3 className="text-lg font-semibold mb-2 text-white">The Koru Symbol</h3>
-          <p className="text-sm leading-relaxed text-white">
+          <h3 className="text-lg font-semibold mb-2" style={{ color: '#ffffff' }}>
+            The Koru Symbol
+          </h3>
+          <p className="text-sm leading-relaxed" style={{ color: '#ffffff' }}>
             The Koru is a spiral derived from the unfurling frond of the silver fern.
             It symbolizes new life, growth, strength and peace. This yacht, named Koru,
             was built in 2023 and represents a journey toward new beginnings. In the
