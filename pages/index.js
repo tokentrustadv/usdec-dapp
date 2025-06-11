@@ -1,3 +1,4 @@
+// pages/index.js
 import Head from 'next/head';
 import { allowedUsers } from '../allowlist';
 import { useState } from 'react';
@@ -18,7 +19,6 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
-  const [redeemHash, setRedeemHash] = useState('');
   const [recentTxs, setRecentTxs] = useState([]);
 
   const parsedAmount = parseFloat(amount);
@@ -45,13 +45,17 @@ export default function Home() {
     },
   });
 
-  const { write: redeemWrite, isLoading: redeemLoading } = useContractWrite({
+  const { config: redeemConfig } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'redeem',
-    args: [BigInt(0)],
+    args: isValidAmount ? [BigInt(Math.round(parsedAmount * 1e6))] : undefined,
+    enabled: isConnected && isValidAmount && isAllowed,
+  });
+
+  const { write: redeemWrite, isLoading: redeemLoading } = useContractWrite({
+    ...redeemConfig,
     onSuccess(data) {
-      setRedeemHash(data.hash);
       toast.success('Redeem transaction sent!');
     },
     onError(error) {
@@ -70,27 +74,6 @@ export default function Home() {
 
   const formattedBalance = balance ? (Number(balance) / 1e6).toFixed(4) : '0.0000';
 
-  const addTokenToWallet = async () => {
-    if (window.ethereum) {
-      try {
-        await window.ethereum.request({
-          method: 'wallet_watchAsset',
-          params: {
-            type: 'ERC20',
-            options: {
-              address: USDEC_ADDRESS,
-              symbol: 'USDEC',
-              decimals: 6,
-              image: '/usdec-logo-gold.png',
-            },
-          },
-        });
-      } catch (error) {
-        console.error('Error adding token:', error);
-      }
-    }
-  };
-
   return (
     <>
       <Head>
@@ -98,12 +81,15 @@ export default function Home() {
         <link rel="icon" type="image/png" href="/favicon.png" />
       </Head>
 
-      <div className="min-h-screen bg-cover bg-center flex flex-col items-center p-4" style={{
-        backgroundImage: "url('/koru-bg-wide.png')",
-        backgroundRepeat: 'no-repeat',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-      }}>
+      <div
+        className="min-h-screen bg-cover bg-center flex flex-col items-center p-4"
+        style={{
+          backgroundImage: "url('/koru-bg-wide.png')",
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
         <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
           <Image src="/usdec-logo-gold.png" alt="USDEC Logo" width={180} height={180} />
           <p className="text-xs text-gray-600 italic mb-2">
@@ -145,26 +131,24 @@ export default function Home() {
                         : 'bg-blue-600 hover:bg-blue-700'
                     }`}
                   >
-                    {isLoading ? 'Minting...' : 'Mint USDEC'}
+                    {isLoading ? 'Minting...' : 'Mint'}
+                  </button>
+                  <button
+                    onClick={() => redeemWrite?.()}
+                    disabled={!redeemWrite || redeemLoading || !isValidAmount}
+                    className={`mt-2 w-full p-2 rounded text-white ${
+                      !redeemWrite || redeemLoading || !isValidAmount
+                        ? 'bg-gray-400'
+                        : 'bg-green-600 hover:bg-green-700'
+                    }`}
+                  >
+                    {redeemLoading ? 'Redeeming...' : 'Redeem'}
                   </button>
                 </>
               )}
-              <button
-                onClick={() => redeemWrite?.()}
-                disabled={!redeemWrite || redeemLoading}
-                className={`mt-2 w-full p-2 rounded text-white ${
-                  !redeemWrite || redeemLoading
-                    ? 'bg-gray-400'
-                    : 'bg-green-600 hover:bg-green-700'
-                }`}
-              >
-                {redeemLoading ? 'Redeeming...' : 'Redeem USDEC'}
-              </button>
-
               <div className="mt-4 text-sm text-gray-800">
                 <strong>USDEC Balance:</strong> {formattedBalance}
               </div>
-
               {txHash && (
                 <div className="mt-2">
                   <a
@@ -173,29 +157,10 @@ export default function Home() {
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:underline text-sm"
                   >
-                    View Mint Transaction
+                    View Transaction
                   </a>
                 </div>
               )}
-
-              {redeemHash && (
-                <div className="mt-1">
-                  <a
-                    href={`https://base-sepolia.blockscout.com/tx/${redeemHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline text-sm"
-                  >
-                    View Redeem Transaction
-                  </a>
-                </div>
-              )}
-
-              <div className="mt-4 flex justify-center">
-                <button onClick={addTokenToWallet} className="bg-transparent">
-                  <Image src="/metamask-icon.png" alt="MetaMask Icon" width={32} height={32} />
-                </button>
-              </div>
             </div>
           )}
         </div>
@@ -212,15 +177,22 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                View Today&apos;s APY
+                View Today's APY
               </a>
             </p>
           </div>
         </div>
 
-        <div className="w-full max-w-2xl mt-6 p-4 rounded-lg bg-gradient-to-r from-neutral-900 to-neutral-800">
-          <h3 className="text-lg font-semibold mb-2 text-white">The Koru Symbol</h3>
-          <p className="text-sm leading-relaxed text-white">
+        <div
+          className="w-full max-w-2xl mt-6 p-4 rounded-lg"
+          style={{
+            background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)',
+          }}
+        >
+          <h3 className="text-lg font-semibold mb-2" style={{ color: '#bc9c22' }}>
+            The Koru Symbol
+          </h3>
+          <p className="text-sm leading-relaxed" style={{ color: '#bc9c22' }}>
             The Koru is a spiral derived from the unfurling frond of the silver fern.
             It symbolizes new life, growth, strength and peace. This yacht, named Koru,
             was built in 2023 and represents a journey toward new beginnings. In the
