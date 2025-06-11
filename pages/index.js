@@ -13,12 +13,14 @@ import toast from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
 
 const USDEC_ADDRESS = '0xAF48B53F4384c04B3e579A127ABd8d8949a6F645';
+const USDEC_SYMBOL = 'USDEC';
+const USDEC_DECIMALS = 6;
+const USDEC_LOGO = '/usdec-logo-gold.png';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
-  const [recentTxs, setRecentTxs] = useState([]);
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
@@ -36,7 +38,6 @@ export default function Home() {
     ...config,
     onSuccess(data) {
       setTxHash(data.hash);
-      setRecentTxs((prev) => [data.hash, ...prev.slice(0, 2)]);
       toast.success('Minted successfully!');
     },
     onError(error) {
@@ -68,32 +69,33 @@ export default function Home() {
 
   const formattedBalance = balance ? (Number(balance) / 1e6).toFixed(4) : '0.0000';
 
-  const addTokenToWallet = async () => {
-    try {
-      const wasAdded = await window.ethereum?.request({
-        method: 'wallet_watchAsset',
-        params: {
-          type: 'ERC20',
-          options: {
-            address: USDEC_ADDRESS,
-            symbol: 'USDEC',
-            decimals: 6,
-            image: 'https://www.usdec.xyz/usdec-logo-gold.png',
+  const addToWallet = async () => {
+    if (typeof window.ethereum !== 'undefined' && window.ethereum.request) {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_watchAsset',
+          params: {
+            type: 'ERC20',
+            options: {
+              address: USDEC_ADDRESS,
+              symbol: USDEC_SYMBOL,
+              decimals: USDEC_DECIMALS,
+              image: window.location.origin + USDEC_LOGO,
+            },
           },
-        },
-      });
-      if (wasAdded) {
-        toast.success('USDEC token added to wallet!');
+        });
+      } catch (error) {
+        toast.error('Failed to add token to wallet');
       }
-    } catch (error) {
-      toast.error('Could not add token.');
+    } else {
+      toast.error('Wallet not available');
     }
   };
 
   return (
     <>
       <Head>
-        <title>USDEC - A Stablecoin Built for the Creator Economy</title>
+        <title>USDEC – A Stablecoin Built for the Creator Economy</title>
         <link rel="icon" type="image/png" href="/favicon.png" />
       </Head>
 
@@ -105,9 +107,7 @@ export default function Home() {
       }}>
         <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
           <Image src="/usdec-logo-gold.png" alt="USDEC Logo" width={180} height={180} />
-          <p className="text-xs text-gray-600 italic mb-2">
-            ⏳ redeemable 30 days from mint
-          </p>
+          <p className="text-xs text-gray-300 italic mb-2">⏳ redeemable 30 days from mint</p>
         </div>
 
         <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
@@ -148,7 +148,6 @@ export default function Home() {
                   </button>
                 </>
               )}
-
               <button
                 onClick={() => redeemWrite?.()}
                 disabled={!redeemWrite || redeemLoading}
@@ -165,13 +164,6 @@ export default function Home() {
                 <strong>USDEC Balance:</strong> {formattedBalance}
               </div>
 
-              <button
-                onClick={addTokenToWallet}
-                className="mt-4 w-full p-2 rounded text-white bg-purple-600 hover:bg-purple-700"
-              >
-                Add USDEC to Wallet
-              </button>
-
               {txHash && (
                 <div className="mt-2">
                   <a
@@ -184,6 +176,16 @@ export default function Home() {
                   </a>
                 </div>
               )}
+
+              <div className="mt-4 flex justify-center gap-4">
+                <button onClick={addToWallet} className="flex items-center gap-2 px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-900">
+                  <Image src="/metamask-icon.png" alt="MetaMask" width={20} height={20} />
+                  Add USDEC
+                </button>
+                <div className="flex items-center">
+                  <Image src="/coinbase-icon.png" alt="Coinbase" width={24} height={24} />
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -209,13 +211,9 @@ export default function Home() {
 
         <div
           className="w-full max-w-2xl mt-6 p-4 rounded-lg"
-          style={{
-            background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)',
-          }}
+          style={{ background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)' }}
         >
-          <h3 className="text-lg font-semibold mb-2 text-white">
-            The Koru Symbol
-          </h3>
+          <h3 className="text-lg font-semibold mb-2 text-white">The Koru Symbol</h3>
           <p className="text-sm leading-relaxed text-white">
             The Koru is a spiral derived from the unfurling frond of the silver fern.
             It symbolizes new life, growth, strength and peace. This yacht, named Koru,
