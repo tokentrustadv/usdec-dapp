@@ -110,12 +110,6 @@ export default function Home() {
           <p className="text-xs text-gray-600 italic mb-2">
             ⏳ redeemable 30 days from mint
           </p>
-          <button
-            onClick={addToWallet}
-            className="mt-2 bg-transparent p-2 rounded hover:opacity-80"
-          >
-            <Image src="/metamask-icon.png" alt="MetaMask" width={32} height={32} />
-          </button>
         </div>
 
         <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
@@ -171,6 +165,13 @@ export default function Home() {
               <div className="mt-4 text-sm text-gray-800">
                 <strong>USDEC Balance:</strong> {formattedBalance}
               </div>
+
+              <button
+                onClick={addToWallet}
+                className="mt-4 bg-transparent p-2 rounded hover:opacity-80"
+              >
+                <Image src="/metamask-icon.png" alt="MetaMask" width={32} height={32} />
+              </button>
 
               {txHash && (
                 <div className="mt-2">
