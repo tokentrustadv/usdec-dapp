@@ -45,17 +45,13 @@ export default function Home() {
     },
   });
 
-  const { config: redeemConfig } = usePrepareContractWrite({
+  const { write: redeemWrite, isLoading: redeemLoading } = useContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'redeem',
-    args: isValidAmount ? [BigInt(Math.round(parsedAmount * 1e6))] : undefined,
-    enabled: isConnected && isValidAmount && isAllowed,
-  });
-
-  const { write: redeemWrite, isLoading: redeemLoading } = useContractWrite({
-    ...redeemConfig,
+    args: [BigInt(0)],
     onSuccess(data) {
+      setTxHash(data.hash);
       toast.success('Redeem transaction sent!');
     },
     onError(error) {
@@ -73,6 +69,28 @@ export default function Home() {
   });
 
   const formattedBalance = balance ? (Number(balance) / 1e6).toFixed(4) : '0.0000';
+  const hasBalance = balance && Number(balance) > 0;
+
+  const addToWallet = async () => {
+    if (window.ethereum) {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_watchAsset',
+          params: {
+            type: 'ERC20',
+            options: {
+              address: USDEC_ADDRESS,
+              symbol: 'USDEC',
+              decimals: 6,
+              image: `${window.location.origin}/usdec-logo-gold.png`,
+            },
+          },
+        });
+      } catch (error) {
+        console.error('Error adding token:', error);
+      }
+    }
+  };
 
   return (
     <>
@@ -81,20 +99,23 @@ export default function Home() {
         <link rel="icon" type="image/png" href="/favicon.png" />
       </Head>
 
-      <div
-        className="min-h-screen bg-cover bg-center flex flex-col items-center p-4"
-        style={{
-          backgroundImage: "url('/koru-bg-wide.png')",
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
+      <div className="min-h-screen bg-cover bg-center flex flex-col items-center p-4" style={{
+        backgroundImage: "url('/koru-bg-wide.png')",
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}>
         <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
           <Image src="/usdec-logo-gold.png" alt="USDEC Logo" width={180} height={180} />
           <p className="text-xs text-gray-600 italic mb-2">
             ⏳ redeemable 30 days from mint
           </p>
+          <button
+            onClick={addToWallet}
+            className="mt-2 bg-transparent p-2 rounded hover:opacity-80"
+          >
+            <Image src="/metamask-icon.png" alt="MetaMask" width={32} height={32} />
+          </button>
         </div>
 
         <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
@@ -133,22 +154,24 @@ export default function Home() {
                   >
                     {isLoading ? 'Minting...' : 'Mint'}
                   </button>
-                  <button
-                    onClick={() => redeemWrite?.()}
-                    disabled={!redeemWrite || redeemLoading || !isValidAmount}
-                    className={`mt-2 w-full p-2 rounded text-white ${
-                      !redeemWrite || redeemLoading || !isValidAmount
-                        ? 'bg-gray-400'
-                        : 'bg-green-600 hover:bg-green-700'
-                    }`}
-                  >
-                    {redeemLoading ? 'Redeeming...' : 'Redeem'}
-                  </button>
                 </>
               )}
+              <button
+                onClick={() => redeemWrite?.()}
+                disabled={!redeemWrite || redeemLoading || !hasBalance}
+                className={`mt-2 w-full p-2 rounded text-white ${
+                  !redeemWrite || redeemLoading || !hasBalance
+                    ? 'bg-gray-400'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {redeemLoading ? 'Redeeming...' : 'Redeem'}
+              </button>
+
               <div className="mt-4 text-sm text-gray-800">
                 <strong>USDEC Balance:</strong> {formattedBalance}
               </div>
+
               {txHash && (
                 <div className="mt-2">
                   <a
@@ -177,7 +200,7 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                View Today's APY
+                View Today’s APY
               </a>
             </p>
           </div>
