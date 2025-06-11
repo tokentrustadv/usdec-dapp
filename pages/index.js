@@ -68,10 +68,32 @@ export default function Home() {
 
   const formattedBalance = balance ? (Number(balance) / 1e6).toFixed(4) : '0.0000';
 
+  const addTokenToWallet = async () => {
+    try {
+      const wasAdded = await window.ethereum?.request({
+        method: 'wallet_watchAsset',
+        params: {
+          type: 'ERC20',
+          options: {
+            address: USDEC_ADDRESS,
+            symbol: 'USDEC',
+            decimals: 6,
+            image: 'https://www.usdec.xyz/usdec-logo-gold.png',
+          },
+        },
+      });
+      if (wasAdded) {
+        toast.success('USDEC token added to wallet!');
+      }
+    } catch (error) {
+      toast.error('Could not add token.');
+    }
+  };
+
   return (
     <>
       <Head>
-        <title>USDEC – A Stablecoin Built for the Creator Economy</title>
+        <title>USDEC - A Stablecoin Built for the Creator Economy</title>
         <link rel="icon" type="image/png" href="/favicon.png" />
       </Head>
 
@@ -126,6 +148,7 @@ export default function Home() {
                   </button>
                 </>
               )}
+
               <button
                 onClick={() => redeemWrite?.()}
                 disabled={!redeemWrite || redeemLoading}
@@ -141,6 +164,13 @@ export default function Home() {
               <div className="mt-4 text-sm text-gray-800">
                 <strong>USDEC Balance:</strong> {formattedBalance}
               </div>
+
+              <button
+                onClick={addTokenToWallet}
+                className="mt-4 w-full p-2 rounded text-white bg-purple-600 hover:bg-purple-700"
+              >
+                Add USDEC to Wallet
+              </button>
 
               {txHash && (
                 <div className="mt-2">
@@ -183,10 +213,10 @@ export default function Home() {
             background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)',
           }}
         >
-          <h3 className="text-lg font-semibold mb-2" style={{ color: '#ffffff' }}>
+          <h3 className="text-lg font-semibold mb-2 text-white">
             The Koru Symbol
           </h3>
-          <p className="text-sm leading-relaxed" style={{ color: '#ffffff' }}>
+          <p className="text-sm leading-relaxed text-white">
             The Koru is a spiral derived from the unfurling frond of the silver fern.
             It symbolizes new life, growth, strength and peace. This yacht, named Koru,
             was built in 2023 and represents a journey toward new beginnings. In the
