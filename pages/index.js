@@ -18,6 +18,7 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
+  const [redeemHash, setRedeemHash] = useState('');
   const [recentTxs, setRecentTxs] = useState([]);
 
   const parsedAmount = parseFloat(amount);
@@ -50,6 +51,7 @@ export default function Home() {
     functionName: 'redeem',
     args: [BigInt(0)],
     onSuccess(data) {
+      setRedeemHash(data.hash);
       toast.success('Redeem transaction sent!');
     },
     onError(error) {
@@ -171,7 +173,20 @@ export default function Home() {
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:underline text-sm"
                   >
-                    View Transaction
+                    View Mint Transaction
+                  </a>
+                </div>
+              )}
+
+              {redeemHash && (
+                <div className="mt-1">
+                  <a
+                    href={`https://base-sepolia.blockscout.com/tx/${redeemHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline text-sm"
+                  >
+                    View Redeem Transaction
                   </a>
                 </div>
               )}
@@ -197,21 +212,14 @@ export default function Home() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                View Today's APY
+                View Today&apos;s APY
               </a>
             </p>
           </div>
         </div>
 
-        <div
-          className="w-full max-w-2xl mt-6 p-4 rounded-lg"
-          style={{
-            background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)',
-          }}
-        >
-          <h3 className="text-lg font-semibold mb-2 text-white">
-            The Koru Symbol
-          </h3>
+        <div className="w-full max-w-2xl mt-6 p-4 rounded-lg bg-gradient-to-r from-neutral-900 to-neutral-800">
+          <h3 className="text-lg font-semibold mb-2 text-white">The Koru Symbol</h3>
           <p className="text-sm leading-relaxed text-white">
             The Koru is a spiral derived from the unfurling frond of the silver fern.
             It symbolizes new life, growth, strength and peace. This yacht, named Koru,
