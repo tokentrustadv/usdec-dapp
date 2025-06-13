@@ -1,5 +1,5 @@
 // allowlist.js
 export const allowedUsers = [
-  "0x7d21D2fA510d85108b794e4420C094070d12c612".toLowerCase(), // You
+  "0xEA8FD0B2C515Be4F5088687A323Cc9049de9FA1b".toLowerCase(), // You
   // Add creators or paid subscribers here
 ];
