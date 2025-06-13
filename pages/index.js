@@ -46,6 +46,10 @@ export default function Home() {
       toast.error(error.message || 'Transaction failed');
     },
   });
+  console.log("parsedAmount:", parsedAmount);
+console.log("isValidAmount:", isValidAmount);
+console.log("isAllowed:", isAllowed);
+console.log("write defined:", typeof write === 'function');
 
   const { write: redeemWrite, isLoading: redeemLoading } = useContractWrite({
     address: USDEC_ADDRESS,
