@@ -27,19 +27,13 @@ export default function Home() {
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
   const isAllowed = address ? allowedUsers.includes(address.toLowerCase()) : false;
 
+  const mintAmount = isValidAmount ? BigInt(Math.round(parsedAmount * 1e6)) : undefined;
+
   const { config } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'mint',
-    const mintAmount = isValidAmount ? BigInt(Math.round(parsedAmount * 1e6)) : undefined;
-
-const { config } = usePrepareContractWrite({
-  address: USDEC_ADDRESS,
-  abi: usdecAbi,
-  functionName: 'mint',
-  args: mintAmount ? [mintAmount] : undefined,
-  enabled: isConnected && isValidAmount && isAllowed,
-});
+    args: mintAmount ? [mintAmount] : undefined,
     enabled: isConnected && isValidAmount && isAllowed,
   });
 
@@ -54,10 +48,11 @@ const { config } = usePrepareContractWrite({
       toast.error(error.message || 'Transaction failed');
     },
   });
+
   console.log("parsedAmount:", parsedAmount);
-console.log("isValidAmount:", isValidAmount);
-console.log("isAllowed:", isAllowed);
-console.log("write defined:", typeof write === 'function');
+  console.log("isValidAmount:", isValidAmount);
+  console.log("isAllowed:", isAllowed);
+  console.log("write defined:", typeof write === 'function');
 
   const { write: redeemWrite, isLoading: redeemLoading } = useContractWrite({
     address: USDEC_ADDRESS,
