@@ -34,7 +34,7 @@ export default function Home() {
     abi: usdecAbi,
     functionName: 'mint',
     args: mintAmount ? [mintAmount] : undefined,
-    enabled: isConnected && isValidAmount && isAllowed,
+    enabled: true, // FOR DEBUGGING ONLY
   });
 
   const { write, isLoading } = useContractWrite({
