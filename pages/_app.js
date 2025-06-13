@@ -5,14 +5,14 @@ import { getDefaultWallets, RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { configureChains, createConfig, WagmiConfig } from 'wagmi';
 import { jsonRpcProvider } from 'wagmi/providers/jsonRpc';
 import { publicProvider } from 'wagmi/providers/public';
-import { baseSepolia } from 'wagmi/chains';
+import { base } from 'wagmi/chains'; // ✅ Use Base Mainnet
 import { Toaster } from 'react-hot-toast';
 
 const { chains, publicClient } = configureChains(
-  [baseSepolia],
+  [base], // ✅ Switch to Base Mainnet
   [
     jsonRpcProvider({
-      rpc: () => ({ http: 'https://sepolia.base.org' }),
+      rpc: () => ({ http: 'https://mainnet.base.org' }), // ✅ Base Mainnet RPC
     }),
     publicProvider(),
   ]
