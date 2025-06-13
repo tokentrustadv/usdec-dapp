@@ -13,7 +13,7 @@ import {
 import toast from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
 
-const USDEC_ADDRESS = '0xAF48B53F4384c04B3e579A127ABd8d8949a6F645';
+const USDEC_ADDRESS = '0x24905d0cbFC4645124eFd0086bcf04B4667c488d';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -176,7 +176,7 @@ export default function Home() {
               {txHash && (
                 <div className="mt-2">
                   <a
-                    href={`https://base-sepolia.blockscout.com/tx/${txHash}`}
+                    href={`https://basescan.org/tx/${txHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:underline text-sm"
