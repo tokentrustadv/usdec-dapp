@@ -26,10 +26,9 @@ export default function Home() {
   const parsedAmount = parseFloat(amount);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
   const isAllowed = address ? allowedUsers.includes(address.toLowerCase()) : false;
-
   const mintAmount = isValidAmount ? BigInt(Math.round(parsedAmount * 1e6)) : undefined;
 
-  const { config } = usePrepareContractWrite({
+  const { config: mintConfig } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'mint',
@@ -38,7 +37,7 @@ export default function Home() {
   });
 
   const { write, isLoading } = useContractWrite({
-    ...config,
+    ...mintConfig,
     onSuccess(data) {
       setTxHash(data.hash);
       setRecentTxs((prev) => [data.hash, ...prev.slice(0, 2)]);
@@ -48,11 +47,6 @@ export default function Home() {
       toast.error(error.message || 'Transaction failed');
     },
   });
-
-  console.log("parsedAmount:", parsedAmount);
-  console.log("isValidAmount:", isValidAmount);
-  console.log("isAllowed:", isAllowed);
-  console.log("write defined:", typeof write === 'function');
 
   const { write: redeemWrite, isLoading: redeemLoading } = useContractWrite({
     address: USDEC_ADDRESS,
@@ -110,6 +104,11 @@ export default function Home() {
       }
     }
   };
+
+  console.log("parsedAmount:", parsedAmount);
+  console.log("isValidAmount:", isValidAmount);
+  console.log("isAllowed:", isAllowed);
+  console.log("write defined:", typeof write === 'function');
 
   return (
     <>
