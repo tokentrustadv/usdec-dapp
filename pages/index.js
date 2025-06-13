@@ -26,9 +26,10 @@ export default function Home() {
   const parsedAmount = parseFloat(amount);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
   const isAllowed = address ? allowedUsers.includes(address.toLowerCase()) : false;
+
   const mintAmount = isValidAmount ? BigInt(Math.round(parsedAmount * 1e6)) : undefined;
 
-  const { config: mintConfig } = usePrepareContractWrite({
+  const { config } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'mint',
@@ -37,7 +38,7 @@ export default function Home() {
   });
 
   const { write, isLoading } = useContractWrite({
-    ...mintConfig,
+    ...config,
     onSuccess(data) {
       setTxHash(data.hash);
       setRecentTxs((prev) => [data.hash, ...prev.slice(0, 2)]);
@@ -105,6 +106,7 @@ export default function Home() {
     }
   };
 
+  // 🔍 Debug logs
   console.log("parsedAmount:", parsedAmount);
   console.log("isValidAmount:", isValidAmount);
   console.log("isAllowed:", isAllowed);
@@ -145,7 +147,14 @@ export default function Home() {
                     type="number"
                     placeholder={`Amount (Max 500 USDC | You have ${formattedUsdcBalance})`}
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => {
+                      const input = e.target.value;
+                      if (input === '') {
+                        setAmount('');
+                      } else if (!isNaN(parseFloat(input))) {
+                        setAmount(input);
+                      }
+                    }}
                     min="0"
                     step="0.01"
                     className="w-full p-2 border border-gray-300 rounded mb-2"
