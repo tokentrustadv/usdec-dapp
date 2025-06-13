@@ -10,10 +10,12 @@ import {
   useContractRead,
   usePrepareContractWrite,
 } from 'wagmi';
+import { erc20ABI } from 'wagmi';
 import toast from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
 
 const USDEC_ADDRESS = '0x24905d0cbFC4645124eFd0086bcf04B4667c488d';
+const BASE_USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -59,7 +61,7 @@ export default function Home() {
     },
   });
 
-  const { data: balance } = useContractRead({
+  const { data: usdecBalance } = useContractRead({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'balanceOf',
@@ -68,8 +70,18 @@ export default function Home() {
     watch: true,
   });
 
-  const formattedBalance = balance ? (Number(balance) / 1e6).toFixed(4) : '0.0000';
-  const hasBalance = balance && Number(balance) > 0;
+  const { data: usdcBalance } = useContractRead({
+    address: BASE_USDC_ADDRESS,
+    abi: erc20ABI,
+    functionName: 'balanceOf',
+    args: [address],
+    enabled: isConnected,
+    watch: true,
+  });
+
+  const formattedUsdecBalance = usdecBalance ? (Number(usdecBalance) / 1e6).toFixed(4) : '0.0000';
+  const formattedUsdcBalance = usdcBalance ? (Number(usdcBalance) / 1e6).toFixed(2) : '0.00';
+  const hasBalance = usdecBalance && Number(usdecBalance) > 0;
 
   const addToWallet = async () => {
     if (window.ethereum) {
@@ -125,7 +137,7 @@ export default function Home() {
                 <>
                   <input
                     type="number"
-                    placeholder="Amount (Max 500 USDC)"
+                    placeholder={`Amount (Max 500 USDC | You have ${formattedUsdcBalance})`}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     min="0"
@@ -163,7 +175,8 @@ export default function Home() {
               </button>
 
               <div className="mt-4 text-sm text-gray-800">
-                <strong>USDEC Balance:</strong> {formattedBalance}
+                <p><strong>USDC Balance:</strong> {formattedUsdcBalance}</p>
+                <p><strong>USDEC Balance:</strong> {formattedUsdecBalance}</p>
               </div>
 
               <button
