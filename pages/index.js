@@ -31,7 +31,15 @@ export default function Home() {
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'mint',
-    args: isValidAmount ? [BigInt(Math.round(parsedAmount * 1e6))] : undefined,
+    const mintAmount = isValidAmount ? BigInt(Math.round(parsedAmount * 1e6)) : undefined;
+
+const { config } = usePrepareContractWrite({
+  address: USDEC_ADDRESS,
+  abi: usdecAbi,
+  functionName: 'mint',
+  args: mintAmount ? [mintAmount] : undefined,
+  enabled: isConnected && isValidAmount && isAllowed,
+});
     enabled: isConnected && isValidAmount && isAllowed,
   });
 
