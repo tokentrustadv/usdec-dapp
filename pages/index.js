@@ -144,21 +144,22 @@ export default function Home() {
               ) : (
                 <>
                   <input
-                    type="number"
-                    placeholder={`Amount (Max 500 USDC | You have ${formattedUsdcBalance})`}
-                    value={amount}
-                    onChange={(e) => {
-                      const input = e.target.value;
-                      if (input === '') {
-                        setAmount('');
-                      } else if (!isNaN(parseFloat(input))) {
-                        setAmount(input);
-                      }
-                    }}
-                    min="0"
-                    step="0.01"
-                    className="w-full p-2 border border-gray-300 rounded mb-2"
-                  />
+  type="number"
+  placeholder={`Amount (Max 500 USDC | You have ${formattedUsdcBalance})`}
+  value={amount}
+  onChange={(e) => {
+    const input = e.target.value;
+    // Allow only empty or valid float numbers
+    if (input === '') {
+      setAmount('');
+    } else if (/^\d*\.?\d*$/.test(input)) {
+      setAmount(input);
+    }
+  }}
+  min="0"
+  step="0.01"
+  className="w-full p-2 border border-gray-300 rounded mb-2"
+/>
                   {isValidAmount && (
                     <p className="text-sm text-gray-700 mb-2 font-semibold">
                       Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
