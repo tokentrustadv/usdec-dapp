@@ -1,5 +1,4 @@
-// copy code: pages/index.js
-
+// pages/index.js
 import Head from 'next/head';
 import { allowedUsers } from '../allowlist';
 import { useState } from 'react';
@@ -71,7 +70,7 @@ export default function Home() {
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'redeem',
-    args: [BigInt(0)],
+    args: mintAmount ? [mintAmount] : [BigInt(0)],
     onSuccess(data) {
       setTxHash(data.hash);
       toast.success('Redeem transaction sent!');
@@ -124,7 +123,6 @@ export default function Home() {
     }
   };
 
-  // Debug logs
   console.log("parsedAmount:", parsedAmount);
   console.log("isValidAmount:", isValidAmount);
   console.log("isAllowed:", isAllowed);
