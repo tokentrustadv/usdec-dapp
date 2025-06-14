@@ -23,8 +23,7 @@ export default function Home() {
   const [txHash, setTxHash] = useState('');
   const [recentTxs, setRecentTxs] = useState([]);
 
-  const trimmed = typeof amount === 'string' ? amount.trim() : '';
-  const parsedAmount = parseFloat(trimmed);
+  const parsedAmount = parseFloat(amount);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
   const isAllowed = address ? allowedUsers.includes(address.toLowerCase()) : false;
   const mintAmount = isValidAmount ? BigInt(Math.floor(parsedAmount * 1e6)) : undefined;
@@ -32,6 +31,7 @@ export default function Home() {
   const {
     config,
     error: prepareError,
+    status: prepareStatus,
   } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -114,8 +114,9 @@ export default function Home() {
   console.log("parsedAmount:", parsedAmount);
   console.log("isValidAmount:", isValidAmount);
   console.log("isAllowed:", isAllowed);
-  console.log("mintAmount (type):", mintAmount, typeof mintAmount);
-  console.log("Prepare Error:", prepareError);
+  console.log("mintAmount:", mintAmount, typeof mintAmount);
+  console.log("prepareStatus:", prepareStatus);
+  console.log("prepareError:", prepareError);
   console.log("write defined:", typeof write === 'function');
 
   return (
