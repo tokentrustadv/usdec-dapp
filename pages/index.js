@@ -1,7 +1,7 @@
 // pages/index.js
 import Head from 'next/head';
 import { allowedUsers } from '../allowlist';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
@@ -9,6 +9,7 @@ import {
   useContractWrite,
   useContractRead,
   usePrepareContractWrite,
+  useWaitForTransaction,
 } from 'wagmi';
 import { erc20ABI } from 'wagmi';
 import toast from 'react-hot-toast';
@@ -22,6 +23,7 @@ export default function Home() {
   const [amount, setAmount] = useState('');
   const [txHash, setTxHash] = useState('');
   const [recentTxs, setRecentTxs] = useState([]);
+  const [hasApproved, setHasApproved] = useState(false);
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
@@ -29,116 +31,102 @@ export default function Home() {
   const mintAmount = isValidAmount ? BigInt(Math.floor(parsedAmount * 1e6)) : undefined;
 
   const {
-    config,
-    error: prepareError,
-    status: prepareStatus,
+    config: approveConfig,
+    isSuccess: approvePrepared,
   } = usePrepareContractWrite({
-    address: USDEC_ADDRESS,
-    abi: usdecAbi,
-    functionName: 'mint',
-    args: mintAmount !== undefined ? [mintAmount] : undefined,
-    enabled: isConnected && isValidAmount && isAllowed,
-  });
-
-  const { write, isLoading } = useContractWrite({
-    ...config,
-    onSuccess(data) {
-      setTxHash(data.hash);
-      setRecentTxs((prev) => [data.hash, ...prev.slice(0, 2)]);
-      toast.success('Minted successfully!');
-      setAmount('');
-    },
-    onError(error) {
-      toast.error(error.message || 'Transaction failed');
-    },
-  });
-
-  const { write: approveWrite, isLoading: isApproving } = useContractWrite({
     address: BASE_USDC_ADDRESS,
     abi: erc20ABI,
     functionName: 'approve',
     args: mintAmount ? [USDEC_ADDRESS, mintAmount] : undefined,
+    enabled: isConnected && isValidAmount && isAllowed,
+  });
+
+  const {
+    write: approveWrite,
+    data: approveData,
+    isLoading: isApproving,
+    isSuccess: approveSuccess,
+  } = useContractWrite({
+    ...approveConfig,
     onSuccess(data) {
-      toast.success('Approval successful!');
+      toast.success('Approval sent!');
     },
     onError(error) {
       toast.error('Approval failed: ' + (error.message || ''));
     },
   });
 
-  const { write: redeemWrite, isLoading: redeemLoading } = useContractWrite({
-    address: USDEC_ADDRESS,
-    abi: usdecAbi,
-    functionName: 'redeem',
-    args: mintAmount ? [mintAmount] : [BigInt(0)],
-    onSuccess(data) {
-      setTxHash(data.hash);
-      toast.success('Redeem transaction sent!');
-    },
-    onError(error) {
-      toast.error(error.message || 'Redeem failed');
+  const { isSuccess: approvalConfirmed } = useWaitForTransaction({
+    hash: approveData?.hash,
+    onSuccess() {
+      setHasApproved(true);
+      toast.success('Approval confirmed!');
     },
   });
 
-  const { data: usdecBalance } = useContractRead({
+  const {
+    config: mintConfig,
+    error: prepareError,
+  } = usePrepareContractWrite({
+    address: USDEC_ADDRESS,
+    abi: usdecAbi,
+    functionName: 'mint',
+    args: mintAmount ? [mintAmount] : undefined,
+    enabled: isConnected && isValidAmount && isAllowed && hasApproved,
+  });
+
+  const {
+    write: mintWrite,
+    isLoading: isMinting,
+  } = useContractWrite({
+    ...mintConfig,
+    onSuccess(data) {
+      setTxHash(data.hash);
+      setRecentTxs((prev) => [data.hash, ...prev.slice(0, 2)]);
+      toast.success('Minted successfully!');
+      setAmount('');
+      setHasApproved(false); // Reset for next mint
+    },
+    onError(error) {
+      toast.error(error.message || 'Mint failed');
+    },
+  });
+
+  useEffect(() => {
+    if (approveSuccess && approvalConfirmed) {
+      setHasApproved(true);
+    }
+  }, [approveSuccess, approvalConfirmed]);
+
+  const formattedUsdecBalance = useContractRead({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'balanceOf',
     args: [address],
     enabled: isConnected,
     watch: true,
-  });
+  }).data ?? 0n;
 
-  const { data: usdcBalance } = useContractRead({
+  const formattedUsdcBalance = useContractRead({
     address: BASE_USDC_ADDRESS,
     abi: erc20ABI,
     functionName: 'balanceOf',
     args: [address],
     enabled: isConnected,
     watch: true,
-  });
+  }).data ?? 0n;
 
-  const formattedUsdecBalance = usdecBalance ? (Number(usdecBalance) / 1e6).toFixed(4) : '0.0000';
-  const formattedUsdcBalance = usdcBalance ? (Number(usdcBalance) / 1e6).toFixed(2) : '0.00';
-  const hasBalance = usdecBalance && Number(usdecBalance) > 0;
-
-  const addToWallet = async () => {
-    if (window.ethereum) {
-      try {
-        await window.ethereum.request({
-          method: 'wallet_watchAsset',
-          params: {
-            type: 'ERC20',
-            options: {
-              address: USDEC_ADDRESS,
-              symbol: 'USDEC',
-              decimals: 6,
-              image: `${window.location.origin}/usdec-logo-gold.png`,
-            },
-          },
-        });
-      } catch (error) {
-        console.error('Error adding token:', error);
-      }
-    }
-  };
-
-  console.log("parsedAmount:", parsedAmount);
-  console.log("isValidAmount:", isValidAmount);
-  console.log("isAllowed:", isAllowed);
-  console.log("mintAmount:", mintAmount, typeof mintAmount);
-  console.log("prepareStatus:", prepareStatus);
-  console.log("prepareError:", prepareError);
-  console.log("write defined:", typeof write === 'function');
+  const displayUSDEC = (Number(formattedUsdecBalance) / 1e6).toFixed(4);
+  const displayUSDC = (Number(formattedUsdcBalance) / 1e6).toFixed(2);
 
   return (
     <>
       <Head>
         <title>USDEC – A Stablecoin Built for the Creator Economy</title>
-        <link rel="icon" type="image/png" href="/favicon.png" />
+        <link rel="icon" href="/favicon.png" />
       </Head>
 
-      <div className="min-h-screen bg-cover bg-center flex flex-col items-center p-4" style={{
+      <div className="min-h-screen bg-cover bg-center p-4" style={{
         backgroundImage: "url('/koru-bg-wide.png')",
         backgroundRepeat: 'no-repeat',
         backgroundSize: 'cover',
@@ -146,15 +134,13 @@ export default function Home() {
       }}>
         <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
           <Image src="/usdec-logo-gold.png" alt="USDEC Logo" width={180} height={180} />
-          <p className="text-xs text-gray-600 italic mb-2">
-            ⏳ redeemable 30 days from mint
-          </p>
+          <p className="text-xs text-gray-200 italic mb-2">⏳ redeemable 30 days from mint</p>
         </div>
 
         <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
           <ConnectButton />
           {isConnected && (
-            <div className="mt-4">
+            <>
               {!isAllowed ? (
                 <div className="text-red-600 text-sm font-semibold mb-4">
                   🚫 You are not allowlisted to mint USDEC.<br />
@@ -163,10 +149,8 @@ export default function Home() {
               ) : (
                 <>
                   <input
-                    id="mintAmount"
-                    name="mintAmount"
                     type="number"
-                    placeholder={`Amount (Max 500 USDC | You have ${formattedUsdcBalance})`}
+                    placeholder={`Amount (Max 500 USDC | You have ${displayUSDC})`}
                     value={amount}
                     onChange={(e) => {
                       const input = e.target.value;
@@ -176,8 +160,6 @@ export default function Home() {
                         setAmount(input);
                       }
                     }}
-                    min="0"
-                    step="0.01"
                     className="w-full p-2 border border-gray-300 rounded mb-2"
                   />
                   {isValidAmount && (
@@ -197,49 +179,22 @@ export default function Home() {
                     {isApproving ? 'Approving...' : 'Approve USDC'}
                   </button>
                   <button
-                    onClick={() => write?.()}
-                    disabled={!write || isLoading || !isValidAmount}
-                    title={
-                      !isAllowed
-                        ? 'You are not allowlisted.'
-                        : !isValidAmount
-                        ? 'Enter a valid amount (max 500).'
-                        : 'Wallet not ready yet.'
-                    }
+                    onClick={() => mintWrite?.()}
+                    disabled={!mintWrite || isMinting || !isValidAmount || !hasApproved}
                     className={`w-full p-2 rounded text-white ${
-                      !write || isLoading || !isValidAmount
+                      !mintWrite || isMinting || !isValidAmount || !hasApproved
                         ? 'bg-gray-400 cursor-not-allowed'
                         : 'bg-blue-600 hover:bg-blue-700'
                     }`}
                   >
-                    {isLoading ? 'Minting...' : 'Mint'}
+                    {isMinting ? 'Minting...' : 'Mint'}
                   </button>
                 </>
               )}
-              <button
-                onClick={() => redeemWrite?.()}
-                disabled={!redeemWrite || redeemLoading || !hasBalance}
-                className={`mt-2 w-full p-2 rounded text-white ${
-                  !redeemWrite || redeemLoading || !hasBalance
-                    ? 'bg-gray-400'
-                    : 'bg-green-600 hover:bg-green-700'
-                }`}
-              >
-                {redeemLoading ? 'Redeeming...' : 'Redeem'}
-              </button>
-
               <div className="mt-4 text-sm text-gray-800">
-                <p><strong>USDC Balance:</strong> {formattedUsdcBalance}</p>
-                <p><strong>USDEC Balance:</strong> {formattedUsdecBalance}</p>
+                <p><strong>USDC Balance:</strong> {displayUSDC}</p>
+                <p><strong>USDEC Balance:</strong> {displayUSDEC}</p>
               </div>
-
-              <button
-                onClick={addToWallet}
-                className="mt-4 bg-transparent p-2 rounded hover:opacity-80"
-              >
-                <Image src="/metamask-icon.png" alt="MetaMask" width={32} height={32} />
-              </button>
-
               {txHash && (
                 <div className="mt-2">
                   <a
@@ -252,34 +207,28 @@ export default function Home() {
                   </a>
                 </div>
               )}
-            </div>
+            </>
           )}
         </div>
 
-        <div className="mb-6 text-center">
-          <div className="bg-white bg-opacity-90 shadow-lg rounded-xl p-4 mb-6 max-w-sm w-full">
-            <h3 className="text-md font-semibold text-gray-800 mb-1">Vault Info</h3>
-            <p className="text-sm text-gray-700">Name: Arcadia USDC Vault</p>
-            <p className="text-sm text-gray-700">Platform: Arcadia Finance</p>
-            <p className="text-sm text-gray-700">Network: Base</p>
-            <p className="text-xs text-blue-600 truncate mt-1">
-              <a
-                href="https://arcadia.finance/pool/8453/0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                View Today’s APY
-              </a>
-            </p>
-          </div>
+        <div className="bg-white bg-opacity-90 shadow-lg rounded-xl p-4 mb-6 max-w-sm w-full text-center">
+          <h3 className="text-md font-semibold text-gray-800 mb-1">Vault Info</h3>
+          <p className="text-sm text-gray-700">Name: Arcadia USDC Vault</p>
+          <p className="text-sm text-gray-700">Platform: Arcadia Finance</p>
+          <p className="text-sm text-gray-700">Network: Base</p>
+          <a
+            href="https://arcadia.finance/pool/8453/0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-600 hover:underline"
+          >
+            View Today’s APY
+          </a>
         </div>
 
-        <div
-          className="w-full max-w-2xl mt-6 p-4 rounded-lg"
-          style={{
-            background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)',
-          }}
-        >
+        <div className="w-full max-w-2xl mt-6 p-4 rounded-lg" style={{
+          background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)',
+        }}>
           <h3 className="text-lg font-semibold mb-2" style={{ color: '#bc9c22' }}>
             The Koru Symbol
           </h3>
