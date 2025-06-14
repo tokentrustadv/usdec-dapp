@@ -8,7 +8,7 @@ export function middleware(req) {
     'Content-Security-Policy',
     [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://*.walletconnect.com https://*.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://*.coinbase.com",
+      "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://*.walletconnect.com https://*.cloudflare.com https://www.googletagmanager.com https://www.google-analytics.com https://*.coinbase.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "connect-src *",
