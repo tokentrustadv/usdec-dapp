@@ -85,7 +85,7 @@ export default function Home() {
       setRecentTxs((prev) => [data.hash, ...prev.slice(0, 2)]);
       toast.success('Minted successfully!');
       setAmount('');
-      setHasApproved(false); // Reset for next mint
+      setHasApproved(false);
     },
     onError(error) {
       toast.error(error.message || 'Mint failed');
@@ -97,6 +97,10 @@ export default function Home() {
       setHasApproved(true);
     }
   }, [approveSuccess, approvalConfirmed]);
+
+  useEffect(() => {
+    setHasApproved(false);
+  }, [amount]);
 
   const formattedUsdecBalance = useContractRead({
     address: USDEC_ADDRESS,
@@ -149,6 +153,8 @@ export default function Home() {
               ) : (
                 <>
                   <input
+                    id="usdc-amount"
+                    name="usdc-amount"
                     type="number"
                     placeholder={`Amount (Max 500 USDC | You have ${displayUSDC})`}
                     value={amount}
@@ -167,19 +173,25 @@ export default function Home() {
                       Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
                     </p>
                   )}
+                  {!hasApproved && (
+                    <button
+                      onClick={() => {
+                        if (approveWrite) approveWrite();
+                      }}
+                      disabled={!approveWrite || isApproving || !isValidAmount}
+                      className={`w-full p-2 mb-2 rounded text-white ${
+                        !approveWrite || isApproving || !isValidAmount
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-yellow-600 hover:bg-yellow-700'
+                      }`}
+                    >
+                      {isApproving ? 'Approving...' : 'Approve USDC'}
+                    </button>
+                  )}
                   <button
-                    onClick={() => approveWrite?.()}
-                    disabled={!approveWrite || isApproving || !isValidAmount}
-                    className={`w-full p-2 mb-2 rounded text-white ${
-                      !approveWrite || isApproving || !isValidAmount
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-yellow-600 hover:bg-yellow-700'
-                    }`}
-                  >
-                    {isApproving ? 'Approving...' : 'Approve USDC'}
-                  </button>
-                  <button
-                    onClick={() => mintWrite?.()}
+                    onClick={() => {
+                      if (mintWrite) mintWrite();
+                    }}
                     disabled={!mintWrite || isMinting || !isValidAmount || !hasApproved}
                     className={`w-full p-2 rounded text-white ${
                       !mintWrite || isMinting || !isValidAmount || !hasApproved
