@@ -25,7 +25,7 @@ export default function Home() {
 
   // Robust input parsing
   const trimmed = typeof amount === 'string' ? amount.trim() : '';
-  const parsedAmount = trimmed === '' ? NaN : parseFloat(trimmed);
+  const parsedAmount = parseFloat(amount);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
   const isAllowed = address ? allowedUsers.includes(address.toLowerCase()) : false;
   const mintAmount = isValidAmount ? BigInt(Math.round(parsedAmount * 1e6)) : undefined;
@@ -145,21 +145,23 @@ export default function Home() {
               ) : (
                 <>
                   <input
-                    type="number"
-                    placeholder={`Amount (Max 500 USDC | You have ${formattedUsdcBalance})`}
-                    value={amount}
-                    onChange={(e) => {
-                      const input = e.target.value;
-                      if (input === '') {
-                        setAmount('');
-                      } else if (/^\d*\.?\d*$/.test(input)) {
-                        setAmount(input);
-                      }
-                    }}
-                    min="0"
-                    step="0.01"
-                    className="w-full p-2 border border-gray-300 rounded mb-2"
-                  />
+  id="mintAmount"
+  name="mintAmount"
+  type="number"
+  placeholder={`Amount (Max 500 USDC | You have ${formattedUsdcBalance})`}
+  value={amount}
+  onChange={(e) => {
+    const input = e.target.value;
+    if (input === '') {
+      setAmount('');
+    } else if (/^\d*\.?\d*$/.test(input)) {
+      setAmount(input);
+    }
+  }}
+  min="0"
+  step="0.01"
+  className="w-full p-2 border border-gray-300 rounded mb-2"
+/>
                   {isValidAmount && (
                     <p className="text-sm text-gray-700 mb-2 font-semibold">
                       Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
