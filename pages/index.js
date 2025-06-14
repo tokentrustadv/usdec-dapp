@@ -98,6 +98,23 @@ export default function Home() {
     watch: true,
   });
 
+  const { data: usdcAllowance } = useContractRead({
+    address: BASE_USDC_ADDRESS,
+    abi: erc20ABI,
+    functionName: 'allowance',
+    args: address ? [address, USDEC_ADDRESS] : undefined,
+    enabled: isConnected && isValidAmount,
+    watch: true,
+  });
+
+  const canMint =
+    isConnected &&
+    isValidAmount &&
+    isAllowed &&
+    usdcAllowance &&
+    mintAmount &&
+    BigInt(usdcAllowance) >= mintAmount;
+
   const formattedUsdecBalance = usdecBalance ? (Number(usdecBalance) / 1e6).toFixed(4) : '0.0000';
   const formattedUsdcBalance = usdcBalance ? (Number(usdcBalance) / 1e6).toFixed(2) : '0.00';
   const hasBalance = usdecBalance && Number(usdecBalance) > 0;
@@ -122,15 +139,6 @@ export default function Home() {
       }
     }
   };
-
-  // Debug logs
-  console.log("parsedAmount:", parsedAmount);
-  console.log("isValidAmount:", isValidAmount);
-  console.log("isAllowed:", isAllowed);
-  console.log("mintAmount:", mintAmount, typeof mintAmount);
-  console.log("prepareStatus:", prepareStatus);
-  console.log("prepareError:", prepareError);
-  console.log("write defined:", typeof write === 'function');
 
   return (
     <>
@@ -199,16 +207,20 @@ export default function Home() {
                   </button>
                   <button
                     onClick={() => write?.()}
-                    disabled={!write || isLoading || !isValidAmount}
+                    disabled={!canMint || isLoading}
                     title={
                       !isAllowed
                         ? 'You are not allowlisted.'
                         : !isValidAmount
                         ? 'Enter a valid amount (max 500).'
+                        : !usdcAllowance
+                        ? 'Fetching USDC allowance...'
+                        : BigInt(usdcAllowance) < mintAmount
+                        ? 'Approve USDC before minting.'
                         : 'Wallet not ready yet.'
                     }
                     className={`w-full p-2 rounded text-white ${
-                      !write || isLoading || !isValidAmount
+                      !canMint || isLoading
                         ? 'bg-gray-400 cursor-not-allowed'
                         : 'bg-blue-600 hover:bg-blue-700'
                     }`}
