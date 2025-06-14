@@ -23,18 +23,20 @@ export default function Home() {
   const [txHash, setTxHash] = useState('');
   const [recentTxs, setRecentTxs] = useState([]);
 
-  // Robust input parsing
   const trimmed = typeof amount === 'string' ? amount.trim() : '';
-  const parsedAmount = parseFloat(amount);
+  const parsedAmount = parseFloat(trimmed);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
   const isAllowed = address ? allowedUsers.includes(address.toLowerCase()) : false;
-  const mintAmount = isValidAmount ? BigInt(Math.round(parsedAmount * 1e6)) : undefined;
+  const mintAmount = isValidAmount ? BigInt(Math.floor(parsedAmount * 1e6)) : undefined;
 
-  const { config } = usePrepareContractWrite({
+  const {
+    config,
+    error: prepareError,
+  } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'mint',
-    args: mintAmount ? [mintAmount] : undefined,
+    args: mintAmount !== undefined ? [mintAmount] : undefined,
     enabled: isConnected && isValidAmount && isAllowed,
   });
 
@@ -44,6 +46,7 @@ export default function Home() {
       setTxHash(data.hash);
       setRecentTxs((prev) => [data.hash, ...prev.slice(0, 2)]);
       toast.success('Minted successfully!');
+      setAmount('');
     },
     onError(error) {
       toast.error(error.message || 'Transaction failed');
@@ -111,6 +114,8 @@ export default function Home() {
   console.log("parsedAmount:", parsedAmount);
   console.log("isValidAmount:", isValidAmount);
   console.log("isAllowed:", isAllowed);
+  console.log("mintAmount (type):", mintAmount, typeof mintAmount);
+  console.log("Prepare Error:", prepareError);
   console.log("write defined:", typeof write === 'function');
 
   return (
@@ -145,23 +150,23 @@ export default function Home() {
               ) : (
                 <>
                   <input
-  id="mintAmount"
-  name="mintAmount"
-  type="number"
-  placeholder={`Amount (Max 500 USDC | You have ${formattedUsdcBalance})`}
-  value={amount}
-  onChange={(e) => {
-    const input = e.target.value;
-    if (input === '') {
-      setAmount('');
-    } else if (/^\d*\.?\d*$/.test(input)) {
-      setAmount(input);
-    }
-  }}
-  min="0"
-  step="0.01"
-  className="w-full p-2 border border-gray-300 rounded mb-2"
-/>
+                    id="mintAmount"
+                    name="mintAmount"
+                    type="number"
+                    placeholder={`Amount (Max 500 USDC | You have ${formattedUsdcBalance})`}
+                    value={amount}
+                    onChange={(e) => {
+                      const input = e.target.value;
+                      if (input === '') {
+                        setAmount('');
+                      } else if (/^\d*\.?\d*$/.test(input)) {
+                        setAmount(input);
+                      }
+                    }}
+                    min="0"
+                    step="0.01"
+                    className="w-full p-2 border border-gray-300 rounded mb-2"
+                  />
                   {isValidAmount && (
                     <p className="text-sm text-gray-700 mb-2 font-semibold">
                       Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
@@ -170,9 +175,16 @@ export default function Home() {
                   <button
                     onClick={() => write?.()}
                     disabled={!write || isLoading || !isValidAmount}
+                    title={
+                      !isAllowed
+                        ? 'You are not allowlisted.'
+                        : !isValidAmount
+                        ? 'Enter a valid amount (max 500).'
+                        : 'Wallet not ready yet.'
+                    }
                     className={`w-full p-2 rounded text-white ${
                       !write || isLoading || !isValidAmount
-                        ? 'bg-gray-400'
+                        ? 'bg-gray-400 cursor-not-allowed'
                         : 'bg-blue-600 hover:bg-blue-700'
                     }`}
                   >
