@@ -23,10 +23,11 @@ export default function Home() {
   const [txHash, setTxHash] = useState('');
   const [recentTxs, setRecentTxs] = useState([]);
 
-  const parsedAmount = parseFloat(amount);
+  // Robust input parsing
+  const trimmed = typeof amount === 'string' ? amount.trim() : '';
+  const parsedAmount = trimmed === '' ? NaN : parseFloat(trimmed);
   const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
   const isAllowed = address ? allowedUsers.includes(address.toLowerCase()) : false;
-
   const mintAmount = isValidAmount ? BigInt(Math.round(parsedAmount * 1e6)) : undefined;
 
   const { config } = usePrepareContractWrite({
@@ -34,7 +35,7 @@ export default function Home() {
     abi: usdecAbi,
     functionName: 'mint',
     args: mintAmount ? [mintAmount] : undefined,
-    enabled: true, // FOR DEBUGGING ONLY
+    enabled: isConnected && isValidAmount && isAllowed,
   });
 
   const { write, isLoading } = useContractWrite({
@@ -106,7 +107,7 @@ export default function Home() {
     }
   };
 
-  // 🔍 Debug logs
+  // Debug logs
   console.log("parsedAmount:", parsedAmount);
   console.log("isValidAmount:", isValidAmount);
   console.log("isAllowed:", isAllowed);
@@ -144,22 +145,21 @@ export default function Home() {
               ) : (
                 <>
                   <input
-  type="number"
-  placeholder={`Amount (Max 500 USDC | You have ${formattedUsdcBalance})`}
-  value={amount}
-  onChange={(e) => {
-    const input = e.target.value;
-    // Allow only empty or valid float numbers
-    if (input === '') {
-      setAmount('');
-    } else if (/^\d*\.?\d*$/.test(input)) {
-      setAmount(input);
-    }
-  }}
-  min="0"
-  step="0.01"
-  className="w-full p-2 border border-gray-300 rounded mb-2"
-/>
+                    type="number"
+                    placeholder={`Amount (Max 500 USDC | You have ${formattedUsdcBalance})`}
+                    value={amount}
+                    onChange={(e) => {
+                      const input = e.target.value;
+                      if (input === '') {
+                        setAmount('');
+                      } else if (/^\d*\.?\d*$/.test(input)) {
+                        setAmount(input);
+                      }
+                    }}
+                    min="0"
+                    step="0.01"
+                    className="w-full p-2 border border-gray-300 rounded mb-2"
+                  />
                   {isValidAmount && (
                     <p className="text-sm text-gray-700 mb-2 font-semibold">
                       Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
