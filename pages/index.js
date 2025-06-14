@@ -53,6 +53,19 @@ export default function Home() {
     },
   });
 
+  const { write: approveWrite, isLoading: isApproving } = useContractWrite({
+    address: BASE_USDC_ADDRESS,
+    abi: erc20ABI,
+    functionName: 'approve',
+    args: mintAmount ? [USDEC_ADDRESS, mintAmount] : undefined,
+    onSuccess(data) {
+      toast.success('Approval successful!');
+    },
+    onError(error) {
+      toast.error('Approval failed: ' + (error.message || ''));
+    },
+  });
+
   const { write: redeemWrite, isLoading: redeemLoading } = useContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -173,6 +186,17 @@ export default function Home() {
                       Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
                     </p>
                   )}
+                  <button
+                    onClick={() => approveWrite?.()}
+                    disabled={!approveWrite || isApproving || !isValidAmount}
+                    className={`w-full p-2 mb-2 rounded text-white ${
+                      !approveWrite || isApproving || !isValidAmount
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-yellow-600 hover:bg-yellow-700'
+                    }`}
+                  >
+                    {isApproving ? 'Approving...' : 'Approve USDC'}
+                  </button>
                   <button
                     onClick={() => write?.()}
                     disabled={!write || isLoading || !isValidAmount}
