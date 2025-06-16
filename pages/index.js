@@ -244,6 +244,13 @@ export default function Home() {
                       Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
                     </p>
                   )}
+{/* ── DEBUG FLAGS ── */}
+          <div className="text-xs text-gray-600 mb-2">
+            <p>mintWrite: {Boolean(mintWrite).toString()}</p>
+            <p>isMinting: {isMinting.toString()}</p>
+            <p>validAmount: {isValidAmount.toString()}</p>
+            <p>hasApproved: {hasApproved.toString()}</p>
+          </div>
                   {!hasApproved && (
                     <button
                       onClick={() => approveWrite?.()}
