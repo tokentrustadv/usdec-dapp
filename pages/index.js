@@ -163,8 +163,38 @@ export default function Home() {
   return (
     <>
       <Head>
+        {/* Required meta tags */}
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+        {/* Title & favicon */}
         <title>USDEC – A Stablecoin Built for the Creator Economy</title>
         <link rel="icon" href="/favicon.png" />
+
+        {/* CSP meta to allow Wagmi’s dynamic eval */}
+        <meta
+          httpEquiv="Content-Security-Policy"
+          content={
+            [
+              `default-src 'self'`,
+              `script-src 'self' 'unsafe-eval' 'unsafe-inline'
+                https://cdn.jsdelivr.net
+                https://*.walletconnect.com
+                https://*.cloudflare.com
+                https://www.googletagmanager.com
+                https://www.google-analytics.com
+                https://*.coinbase.com`,
+              `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
+              `font-src 'self' https://fonts.gstatic.com`,
+              `connect-src *`,
+              `img-src * data: blob:`,
+              `frame-src *`,
+            ]
+              .join('; ')
+              .replace(/\s{2,}/g, ' ')
+              .trim()
+          }
+        />
       </Head>
 
       <div
