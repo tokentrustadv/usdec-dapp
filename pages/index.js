@@ -254,7 +254,6 @@ useWaitForTransaction({
             <p>isMinting: {isMinting.toString()}</p>
             <p>validAmount: {isValidAmount.toString()}</p>
             <p>hasApproved: {hasApproved.toString()}</p>
-            <p>mintError: {prepareMintError?.message || 'none'}</p>
           </div>
                   {!hasApproved && (
                     <button
