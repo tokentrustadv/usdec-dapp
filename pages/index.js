@@ -68,33 +68,35 @@ export default function Home() {
     },
   });
 
-  // Mint (deposit → vault + mint tokens)
-  const {
-  config: mintConfig,
-  error: prepareMintError,    // ← grab the error
-} = usePrepareContractWrite({
+  // ADD this direct write hook
+const {
+  write: mintWrite,
+  isLoading: isMinting,
+  data: mintData,
+  isSuccess: mintSent,
+} = useContractWrite({
   address: USDEC_ADDRESS,
   abi: usdecAbi,
   functionName: 'mint',
   args: fullAmount ? [fullAmount] : undefined,
   enabled: isConnected && isValidAmount && isAllowed && hasApproved,
+  onError(error) {
+    toast.error(error.message || 'Mint failed');
+  },
+  onSuccess(data) {
+    setTxHash(data.hash);
+    toast.success('Mint transaction sent!');
+    setAmount('');
+    setHasApproved(false);
+  },
 });
-  const {
-    write: mintWrite,
-    isLoading: isMinting,
-  } = useContractWrite({
-    ...mintConfig,
-    onSuccess(data) {
-      setTxHash(data.hash);
-      toast.success('Minted successfully!');
-      setAmount('');
-      setHasApproved(false);
-    },
-    onError(error) {
-      toast.error(error.message || 'Mint failed');
-    },
-  });
-
+// then watch for confirmation
+useWaitForTransaction({
+  hash: mintData?.hash,
+  onSuccess() {
+    toast.success('Mint confirmed!');
+  },
+});
   // Redeem (withdraw → fee → transfer back)
   const { config: redeemConfig } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
