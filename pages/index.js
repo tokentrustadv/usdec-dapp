@@ -69,14 +69,16 @@ export default function Home() {
   });
 
   // Mint (deposit → vault + mint tokens)
-  const { config: mintConfig } = usePrepareContractWrite({
-    address: USDEC_ADDRESS,
-    abi: usdecAbi,
-    functionName: 'mint',
-    args: fullAmount ? [fullAmount] : undefined,
-    enabled: isConnected && isValidAmount && isAllowed && hasApproved,
-  });
-
+  const {
+  config: mintConfig,
+  error: prepareMintError,    // ← grab the error
+} = usePrepareContractWrite({
+  address: USDEC_ADDRESS,
+  abi: usdecAbi,
+  functionName: 'mint',
+  args: fullAmount ? [fullAmount] : undefined,
+  enabled: isConnected && isValidAmount && isAllowed && hasApproved,
+});
   const {
     write: mintWrite,
     isLoading: isMinting,
@@ -250,6 +252,7 @@ export default function Home() {
             <p>isMinting: {isMinting.toString()}</p>
             <p>validAmount: {isValidAmount.toString()}</p>
             <p>hasApproved: {hasApproved.toString()}</p>
+            <p>mintError: {prepareMintError?.message || 'none'}</p>
           </div>
                   {!hasApproved && (
                     <button
