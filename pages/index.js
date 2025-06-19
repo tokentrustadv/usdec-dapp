@@ -66,19 +66,18 @@ export default function Home() {
     },
   });
 
-  // Mint prepare + simulation error capture
-  const { config: mintConfig, error: mintPrepareError } = usePrepareContractWrite({
+  // ── RECKLESS MINT (skip static simulation) ──
+  const {
+    write: mintWrite,
+    isLoading: isMinting,
+    data: mintData,
+  } = useContractWrite({
+    mode: 'recklesslyUnprepared',
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: 'mint',
     args: fullAmount ? [fullAmount] : undefined,
-    enabled: isConnected && isValidAmount && isAllowed && hasApproved,
-  });
-  // Mint execution
-  const { write: mintWrite, isLoading: isMinting, data: mintData } = useContractWrite({
-    ...mintConfig,
     onError(error) {
-      console.error('🛑 Mint failed:', error);
       toast.error(error.message || 'Mint failed');
     },
     onSuccess(data) {
@@ -146,8 +145,12 @@ export default function Home() {
   const displayUSDEC = (Number(usdecBalance) / 1e6).toFixed(4);
   const displayUnlocked = (Number(unlockedBalance) / 1e6).toFixed(4);
 
-  useEffect(() => { if (approveSuccess) setHasApproved(true); }, [approveSuccess]);
-  useEffect(() => { setHasApproved(false); }, [amount]);
+  useEffect(() => {
+    if (approveSuccess) setHasApproved(true);
+  }, [approveSuccess]);
+  useEffect(() => {
+    setHasApproved(false);
+  }, [amount]);
 
   return (
     <>
@@ -157,7 +160,10 @@ export default function Home() {
         <title>USDEC – A Stablecoin Built for the Creator Economy</title>
         <link rel="icon" href="/favicon.png" />
       </Head>
-      <div className="min-h-screen bg-cover bg-center p-4" style={{ backgroundImage: "url('/koru-bg-wide.png')" }}>
+      <div
+        className="min-h-screen bg-cover bg-center p-4"
+        style={{ backgroundImage: "url('/koru-bg-wide.png')" }}
+      >
         {/* Logo & Timer */}
         <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
           <Image src="/usdec-logo-gold.png" alt="USDEC Logo" width={180} height={180} />
@@ -170,7 +176,8 @@ export default function Home() {
             <>
               {!isAllowed ? (
                 <div className="text-red-600 text-sm font-semibold mb-4">
-                  🚫 You are not allowlisted to mint USDEC.<br />Become a paid Substack member to unlock access.
+                  🚫 You are not allowlisted to mint USDEC.<br />
+                  Become a paid Substack member to unlock access.
                 </div>
               ) : (
                 <>
@@ -180,7 +187,10 @@ export default function Home() {
                     type="number"
                     placeholder={`Amount (Max 500 USDC | You have ${displayUSDC})`}
                     value={amount}
-                    onChange={e => { const v = e.target.value; if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v); }}
+                    onChange={e => {
+                      const v = e.target.value;
+                      if (v === '' || /^\d*\.?\d*$/.test(v)) setAmount(v);
+                    }}
                     className="w-full p-2 border border-gray-300 rounded mb-2"
                   />
                   {isValidAmount && (
@@ -188,30 +198,50 @@ export default function Home() {
                       Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
                     </p>
                   )}
-                  {mintPrepareError && (
-                    <div className="text-red-600 text-sm mb-2">
-                      Simulation error: {mintPrepareError.message}
-                    </div>
-                  )}
                   {!hasApproved ? (
                     <button
                       onClick={() => approveWrite?.()}
                       disabled={!approveWrite || isApproving || !isValidAmount}
-                      className={`w-full p-2 mb-2 rounded text-white ${(!approveWrite || isApproving || !isValidAmount)? 'bg-gray-400 cursor-not-allowed':'bg-yellow-600 hover:bg-yellow-700'}`}
-                    >{isApproving?'Approving...':'Approve USDC'}</button>
+                      className={`w-full p-2 mb-2 rounded text-white ${
+                        !approveWrite || isApproving || !isValidAmount
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-yellow-600 hover:bg-yellow-700'
+                      }`}
+                    >
+                      {isApproving ? 'Approving...' : 'Approve USDC'}
+                    </button>
                   ) : (
                     <button
                       onClick={() => mintWrite?.()}
                       disabled={!mintWrite || isMinting || !isValidAmount || !hasApproved}
-                      className={`w-full p-2 rounded text-white ${(!mintWrite || isMinting || !isValidAmount || !hasApproved)? 'bg-gray-400 cursor-not-allowed':'bg-blue-600 hover:bg-blue-700'}`}
-                    >{isMinting?'Minting...':'Mint'}</button>
+                      className={`w-full p-2 rounded text-white ${
+                        !mintWrite || isMinting || !isValidAmount || !hasApproved
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      }`}
+                    >
+                      {isMinting ? 'Minting...' : 'Mint'}
+                    </button>
                   )}
                   <div className="mt-4 text-sm text-gray-800">
-                    <p><strong>USDC Balance:</strong> {displayUSDC}</p>
-                    <p><strong>USDEC Balance:</strong> {displayUSDEC}</p>
+                    <p>
+                      <strong>USDC Balance:</strong> {displayUSDC}
+                    </p>
+                    <p>
+                      <strong>USDEC Balance:</strong> {displayUSDEC}
+                    </p>
                   </div>
                   {txHash && (
-                    <div className="mt-2"><a href={`https://basescan.org/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm">View Transaction</a></div>
+                    <div className="mt-2">
+                      <a
+                        href={`https://basescan.org/tx/${txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline text-sm"
+                      >
+                        View Transaction
+                      </a>
+                    </div>
                   )}
                 </>
               )}
@@ -232,8 +262,14 @@ export default function Home() {
           <button
             onClick={() => redeemWrite?.()}
             disabled={!redeemWrite || isRedeeming || !isValidRedeem}
-            className={`w-full p-2 rounded text-white ${( !redeemWrite || isRedeeming || !isValidRedeem )? 'bg-gray-400 cursor-not-allowed':'bg-green-600 hover:bg-green-700'}`}
-          >{isRedeeming?'Redeeming...':'Redeem'}</button>
+            className={`w-full p-2 rounded text-white ${
+              !redeemWrite || isRedeeming || !isValidRedeem
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
+          >
+            {isRedeeming ? 'Redeeming...' : 'Redeem'}
+          </button>
         </div>
         {/* Vault Info */}
         <div className="bg-white bg-opacity-90 shadow-lg rounded-xl p-4 mb-6 max-w-sm w-full text-center">
@@ -241,11 +277,23 @@ export default function Home() {
           <p className="text-sm text-gray-700">Name: Arcadia USDC Vault</p>
           <p className="text-sm text-gray-700">Platform: Arcadia Finance</p>
           <p className="text-sm text-gray-700">Network: Base</p>
-          <a href="https://arcadia.finance/pool/8453/0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1" target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">View Today’s APY</a>
+          <a
+            href="https://arcadia.finance/pool/8453/0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-600 hover:underline"
+          >
+            View Today’s APY
+          </a>
         </div>
-        {/* Koru Symbol */}
-        <div className="w-full max-w-2xl mt-6 p-4 rounded-lg" style={{ background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)' }}>
-          <h3 className="text-lg font-semibold mb-2" style={{ color: '#bc9c22' }}>The Koru Symbol</h3>
+        {/* The Koru Symbol */}
+        <div
+          className="w-full max-w-2xl mt-6 p-4 rounded-lg"
+          style={{ background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)' }}
+        >
+          <h3 className="text-lg font-semibold mb-2" style={{ color: '#bc9c22' }}>
+            The Koru Symbol
+          </h3>
           <p className="text-sm leading-relaxed" style={{ color: '#bc9c22' }}>
             The Koru is a spiral derived from the unfurling frond of the silver fern.
             It symbolizes new life, growth, strength and peace. This yacht, named Koru,
