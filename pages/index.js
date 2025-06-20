@@ -15,7 +15,7 @@ import { erc20ABI } from 'wagmi';
 import toast from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
 
-const USDEC_ADDRESS = '0xFCE443999fE6fc01105a901fBD62E46273f9644f';
+const USDEC_ADDRESS = '0xBD1fFaBd96122d8b630d4E2f48bab26040235020';
 const BASE_USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 export default function Home() {
