@@ -15,8 +15,12 @@ import { erc20ABI } from 'wagmi';
 import toast from 'react-hot-toast';
 import usdecAbi from '../usdecAbi.json';
 
-const USDEC_ADDRESS = '0xBD1fFaBd96122d8b630d4E2f48bab26040235020';
+const USDEC_ADDRESS = '0x2FA67413F8D689EE7472aFcF932C771a94519A54';
 const BASE_USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+
+// enforce Arcadia's 10 USDC minimum after 1% fee → input must be ≥ 11
+const MIN_USDC_INPUT = 11;
+const MAX_USDC_INPUT = 500;
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -27,14 +31,21 @@ export default function Home() {
 
   // Mint flow state
   const parsedAmount = parseFloat(amount);
-  const isValidAmount = !isNaN(parsedAmount) && parsedAmount > 0 && parsedAmount <= 500;
+  const isValidAmount =
+    !isNaN(parsedAmount) &&
+    parsedAmount >= MIN_USDC_INPUT &&
+    parsedAmount <= MAX_USDC_INPUT;
   const isAllowed = address ? allowedUsers.includes(address.toLowerCase()) : false;
-  const fullAmount = isValidAmount ? BigInt(Math.floor(parsedAmount * 1e6)) : undefined;
+  const fullAmount = isValidAmount
+    ? BigInt(Math.floor(parsedAmount * 1e6))
+    : undefined;
 
   // Redeem flow state
   const parsedRedeem = parseFloat(redeemAmount);
   const isValidRedeem = !isNaN(parsedRedeem) && parsedRedeem > 0;
-  const redeemValue = isValidRedeem ? BigInt(Math.floor(parsedRedeem * 1e6)) : undefined;
+  const redeemValue = isValidRedeem
+    ? BigInt(Math.floor(parsedRedeem * 1e6))
+    : undefined;
 
   // Approval (USDC → USDEC contract)
   const { config: approveConfig } = usePrepareContractWrite({
@@ -55,7 +66,7 @@ export default function Home() {
       toast.success('Approval sent!');
     },
     onError(error) {
-      toast.error('Approval failed: ' + (error.message || ''));
+      toast.error('Approval failed: ' + error.message);
     },
   });
   useWaitForTransaction({
@@ -78,11 +89,11 @@ export default function Home() {
     functionName: 'mint',
     args: fullAmount ? [fullAmount] : undefined,
     onError(error) {
-      toast.error(error.message || 'Mint failed');
+      toast.error('Mint failed: ' + error.message);
     },
     onSuccess(data) {
       setTxHash(data.hash);
-      toast.success('Mint transaction sent!');
+      toast.success('Mint tx sent!');
       setAmount('');
       setHasApproved(false);
     },
@@ -106,11 +117,11 @@ export default function Home() {
     ...redeemConfig,
     onSuccess(data) {
       setTxHash(data.hash);
-      toast.success('Redeemed successfully!');
+      toast.success('Redeemed!');
       setRedeemAmount('');
     },
     onError(error) {
-      toast.error('Redemption failed: ' + (error.message || ''));
+      toast.error('Redemption failed: ' + error.message);
     },
   });
 
@@ -140,7 +151,6 @@ export default function Home() {
     watch: true,
   }).data ?? 0n;
 
-  // Format for display
   const displayUSDC = (Number(usdcBalance) / 1e6).toFixed(2);
   const displayUSDEC = (Number(usdecBalance) / 1e6).toFixed(4);
   const displayUnlocked = (Number(unlockedBalance) / 1e6).toFixed(4);
@@ -167,8 +177,11 @@ export default function Home() {
         {/* Logo & Timer */}
         <div className="flex flex-col items-center mt-6 mb-4 bg-black bg-opacity-60 p-4 rounded-xl">
           <Image src="/usdec-logo-gold.png" alt="USDEC Logo" width={180} height={180} />
-          <p className="text-xs text-gray-200 italic mb-2">⏳ redeemable 30 days from mint</p>
+          <p className="text-xs text-gray-200 italic mb-2">
+            ⏳ redeemable 30 days from mint
+          </p>
         </div>
+
         {/* Mint Section */}
         <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
           <ConnectButton />
@@ -176,7 +189,8 @@ export default function Home() {
             <>
               {!isAllowed ? (
                 <div className="text-red-600 text-sm font-semibold mb-4">
-                  🚫 You are not allowlisted to mint USDEC.<br />
+                  🚫 You are not allowlisted to mint USDEC.
+                  <br />
                   Become a paid Substack member to unlock access.
                 </div>
               ) : (
@@ -185,7 +199,7 @@ export default function Home() {
                     id="usdc-amount"
                     name="usdc-amount"
                     type="number"
-                    placeholder={`Amount (Max 500 USDC | You have ${displayUSDC})`}
+                    placeholder={`Amount (Min ${MIN_USDC_INPUT} USDC, Max ${MAX_USDC_INPUT} USDC | You have ${displayUSDC})`}
                     value={amount}
                     onChange={e => {
                       const v = e.target.value;
@@ -193,11 +207,17 @@ export default function Home() {
                     }}
                     className="w-full p-2 border border-gray-300 rounded mb-2"
                   />
+                  {parsedAmount > 0 && parsedAmount < MIN_USDC_INPUT && (
+                    <div className="text-red-600 text-sm mb-2">
+                      Minimum of {MIN_USDC_INPUT} USDC required to satisfy Arcadia’s 10 USDC vault minimum.
+                    </div>
+                  )}
                   {isValidAmount && (
                     <p className="text-sm text-gray-700 mb-2 font-semibold">
                       Fee: {(parsedAmount * 0.01).toFixed(2)} USDC • Vault: {(parsedAmount * 0.99).toFixed(2)} USDC
                     </p>
                   )}
+
                   {!hasApproved ? (
                     <button
                       onClick={() => approveWrite?.()}
@@ -223,6 +243,7 @@ export default function Home() {
                       {isMinting ? 'Minting...' : 'Mint'}
                     </button>
                   )}
+
                   <div className="mt-4 text-sm text-gray-800">
                     <p>
                       <strong>USDC Balance:</strong> {displayUSDC}
@@ -248,6 +269,7 @@ export default function Home() {
             </>
           )}
         </div>
+
         {/* Redeem Section */}
         <div className="bg-white bg-opacity-90 shadow-xl rounded-2xl p-6 w-full max-w-sm text-center mb-6">
           <h3 className="text-md font-semibold text-gray-800 mb-1">Redeem USDEC</h3>
@@ -271,6 +293,7 @@ export default function Home() {
             {isRedeeming ? 'Redeeming...' : 'Redeem'}
           </button>
         </div>
+
         {/* Vault Info */}
         <div className="bg-white bg-opacity-90 shadow-lg rounded-xl p-4 mb-6 max-w-sm w-full text-center">
           <h3 className="text-md font-semibold text-gray-800 mb-1">Vault Info</h3>
@@ -286,6 +309,7 @@ export default function Home() {
             View Today’s APY
           </a>
         </div>
+
         {/* The Koru Symbol */}
         <div
           className="w-full max-w-2xl mt-6 p-4 rounded-lg"
@@ -295,8 +319,8 @@ export default function Home() {
             The Koru Symbol
           </h3>
           <p className="text-sm leading-relaxed" style={{ color: '#bc9c22' }}>
-            The Koru is a spiral derived from the unfurling frond of the silver fern.
-            It symbolizes new life, growth, strength and peace. This yacht, named Koru,
+            The Koru is a spiral derived from the unfurling frond of the silver fern. It
+            symbolizes new life, growth, strength and peace. This yacht, named Koru,
             was built in 2023 and represents a journey toward new beginnings. In the
             creator economy, we honor the same spirit — evolving with purpose and
             navigating the open seas of ownership and opportunity.
