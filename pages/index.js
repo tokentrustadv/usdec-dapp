@@ -17,7 +17,7 @@ import { utils } from 'ethers';
 import usdecAbi from '../usdecAbi.json';
 import { allowedUsers } from '../allowlist';
 
-const USDEC_ADDRESS     = '0xeb3245ef14f6f962bdf24d233a1b86071c10b967';
+const USDEC_ADDRESS     = '0x94a2134364df27e1df711c1f0ff4b194b3e20660';
 const BASE_USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 const MIN_INPUT         = 11;   // user must input ≥11 USDC to net ≥10 USDC after fee
 const MAX_INPUT         = 500;
@@ -139,9 +139,9 @@ export default function Home() {
   const displayUSDEC = (Number(usdecBal) / 1e6).toFixed(4);
   const displayUnl   = (Number(unlocked) / 1e6).toFixed(4);
 
-  // Event listeners (optional real-time refresh)
-  useContractEvent({ address: USDEC_ADDRESS, abi: usdecAbi, eventName: 'Mint', listener: () => {} });
-  useContractEvent({ address: USDEC_ADDRESS, abi: usdecAbi, eventName: 'Redeem', listener: () => {} });
+  // Event listeners
+  useContractEvent({ address: USDEC_ADDRESS, abi: usdecAbi, eventName: 'Minted', listener: () => {} });
+  useContractEvent({ address: USDEC_ADDRESS, abi: usdecAbi, eventName: 'Redeemed', listener: () => {} });
 
   // Reset approval when amount changes
   useEffect(() => { setHasApproved(false); }, [amount]);
@@ -164,10 +164,10 @@ export default function Home() {
           backgroundSize: 'cover',
         }}
       >
-        {/* Logo & Timer */}
+        {/* Logo & Redeem Note */}
         <div className="flex flex-col items-center bg-black bg-opacity-60 p-4 rounded-xl my-6">
           <Image src="/usdec-logo-gold.png" alt="USDEC Logo" width={180} height={180} />
-          <p className="text-xs text-gray-200 italic">⏳ redeemable 30 days from mint</p>
+          <p className="text-xs text-gray-200 italic">⏳ redeemable anytime</p>
         </div>
 
         {/* Mint Section */}
@@ -251,7 +251,7 @@ export default function Home() {
             type="number"
             placeholder="Amount to redeem"
             value={redeemAmount}
-            onChange={e => setRedeemAmount(e.target.value)}
+            onChange={e => setRedeemAmount(e.target.value)}  
             className="w-full p-2 mb-2 border rounded"
           />
           <button
@@ -271,7 +271,8 @@ export default function Home() {
           <p className="text-sm">Network: Base</p>
           <a
             href="https://arcadia.finance/pool/8453/0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1"
-            target="_blank" rel="noopener noreferrer"
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-xs text-blue-600 underline"
           >
             View Today’s APY
