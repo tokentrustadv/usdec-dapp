@@ -13,42 +13,44 @@ import {
   useWaitForTransaction,
 } from 'wagmi'
 import { erc20ABI } from 'wagmi'
+import { utils, BigNumber } from 'ethers'
 import usdecAbi from '../usdecAbi.json'
 import { allowedUsers } from '../allowlist'
 
+// Contract addresses & constants
 const USDEC_ADDRESS            = '0x94a2134364df27e1df711c1f0ff4b194b3e20660'
 const BASE_USDC_ADDRESS        = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-const MIN_INPUT                = 11       // user must enter ≥11 USDC so net ≥10
-const MAX_INPUT                = 500      // cap at 500 per mint
-const MINT_FEE_BPS             = 100      // 1%
+const MIN_INPUT                = 11      // user must enter ≥11 USDC so net ≥10
+const MAX_INPUT                = 500     // cap per mint
+const MINT_FEE_BPS             = 100     // 1%
 const BPS_DENOMINATOR          = 10_000
-const MIN_VAULT_DEPOSIT_AMOUNT = BigInt(10 * 1e6) // 10 USDC in 6-decimals
+// 10 USDC minimum into vault, in 6 decimals
+const MIN_VAULT                = utils.parseUnits('10', 6)
 
-// Optional: minimal ABI to preview shares from Arcadia
+// Arcadia previewDeposit ABI
 const ARC_LENDING_POOL_ADDRESS = '0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1'
-const arcadiaVaultAbi = [
-  {
-    inputs: [{ internalType: 'uint256', name: 'assets', type: 'uint256' }],
-    name: 'previewDeposit',
-    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-]
+const arcadiaVaultAbi = [{
+  inputs:    [{ internalType: 'uint256', name: 'assets', type: 'uint256' }],
+  name:      'previewDeposit',
+  outputs:   [{ internalType: 'uint256', name: '',      type: 'uint256' }],
+  stateMutability: 'view',
+  type:      'function',
+}]
 
 export default function Home() {
   const { address, isConnected } = useAccount()
   const { chain }               = useNetwork()
   const onBase                  = chain?.id === 8453
 
-  const [amount, setAmount]       = useState('')
-  const [redeemAmount, setRedeem] = useState('')
-  const [txHash, setTxHash]       = useState('')
-  const [hasApproved, setHasApp]  = useState(false)
+  // ── Component state ─────────────────────────────────────────────────
+  const [amount, setAmount]   = useState('')
+  const [redeem, setRedeem]   = useState('')
+  const [txHash, setTxHash]   = useState('')
+  const [hasApproved, setApp] = useState(false)
 
-  // ── parse + validate user input ─────────────────────────────────────
+  // ── Parse + validate mint input ──────────────────────────────────────
   const parsedAmt = useMemo(() => {
-    const n = parseFloat(amount)
+    const n = Number(amount)
     return isNaN(n) ? NaN : n
   }, [amount])
 
@@ -56,103 +58,106 @@ export default function Home() {
     && parsedAmt >= MIN_INPUT
     && parsedAmt <= MAX_INPUT
 
-  // convert to JS BigInt in USDC microunits
+  // ── Convert to BigNumber microunits for on-chain ───────────────────────
   const fullAmount = useMemo(() => {
     if (!isValidAmount) return undefined
-    return BigInt(Math.floor(parsedAmt * 1e6))
+    // parseUnits supports up to 6 decimal places
+    return utils.parseUnits(parsedAmt.toFixed(6), 6)
   }, [parsedAmt, isValidAmount])
 
-  // calculate fee + net vault deposit
-  const feeAmount   = fullAmount != null
-    ? (fullAmount * BigInt(MINT_FEE_BPS)) / BigInt(BPS_DENOMINATOR)
-    : undefined
+  // ── Fee + net deposit calculation ───────────────────────────────────
+  const feeAmount   = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR)
+  const vaultAmount = feeAmount ? fullAmount.sub(feeAmount) : undefined
+  const vaultReady  = vaultAmount?.gte(MIN_VAULT) ?? false
 
-  const vaultAmount = fullAmount != null && feeAmount != null
-    ? fullAmount - feeAmount
-    : undefined
-
-  // check Arcadia’s 10 USDC minimum
-  const vaultReady = vaultAmount != null && vaultAmount >= MIN_VAULT_DEPOSIT_AMOUNT
-
+  // ── Allowlist check ──────────────────────────────────────────────────
   const isAllowed = address
-    ? allowedUsers.includes(address.toLowerCase())
+    ? allowedUsers.map(a => a.toLowerCase()).includes(address.toLowerCase())
     : false
 
   // ── Approval hook ────────────────────────────────────────────────────
   const { config: approveCfg } = usePrepareContractWrite({
-    address:       BASE_USDC_ADDRESS,
-    abi:           erc20ABI,
-    functionName:  'approve',
-    args:          vaultReady && fullAmount ? [USDEC_ADDRESS, fullAmount] : undefined,
-    enabled:       isConnected && onBase && isValidAmount && isAllowed,
+    address:      BASE_USDC_ADDRESS,
+    abi:          erc20ABI,
+    functionName: 'approve',
+    args:         vaultReady && fullAmount ? [USDEC_ADDRESS, fullAmount] : undefined,
+    enabled:      isConnected && onBase && isValidAmount && isAllowed,
   })
   const {
-    write:      approveWrite,
-    data:       approveData,
-    isLoading:  isApproving,
+    write:     approveWrite,
+    data:      approveData,
+    isLoading: isApproving,
   } = useContractWrite({
     ...approveCfg,
     onSuccess() { toast.success('Approval sent!') },
     onError(e) { toast.error('Approve failed: ' + e.message) },
   })
   useWaitForTransaction({
-    hash:       approveData?.hash,
+    hash:    approveData?.hash,
+    enabled: Boolean(approveData?.hash),
     onSuccess() {
-      setHasApp(true)
+      setApp(true)
       toast.success('Approval confirmed!')
     },
   })
 
   // ── Mint hook ────────────────────────────────────────────────────────
   const { config: mintCfg, error: mintPrepError } = usePrepareContractWrite({
-    address:       USDEC_ADDRESS,
-    abi:           usdecAbi,
-    functionName:  'mint',
-    args:          vaultReady && fullAmount ? [fullAmount] : undefined,
-    enabled:       isConnected && onBase && isAllowed && hasApproved && vaultReady,
+    address:      USDEC_ADDRESS,
+    abi:          usdecAbi,
+    functionName: 'mint',
+    args:         vaultReady && fullAmount ? [fullAmount] : undefined,
+    enabled:      isConnected && onBase && isAllowed && hasApproved && vaultReady,
   })
   const {
-    write:      mintWrite,
-    isLoading:  isMinting,
-    data:       mintData,
+    write:     mintWrite,
+    isLoading: isMinting,
+    data:      mintData,
   } = useContractWrite({
     ...mintCfg,
     onSuccess(d) {
       setTxHash(d.hash)
       toast.success('Mint tx sent!')
       setAmount('')
-      setHasApp(false)
+      setApp(false)
     },
     onError(e) { toast.error('Mint failed: ' + e.message) },
   })
   useWaitForTransaction({
-    hash:       mintData?.hash,
+    hash:    mintData?.hash,
+    enabled: Boolean(mintData?.hash),
     onSuccess() { toast.success('Mint confirmed!') },
   })
 
-  // ── Optional previewDeposit ───────────────────────────────────────────
+  // ── Preview shares hook ──────────────────────────────────────────────
   const { data: previewSharesBN } = useContractRead({
-    address:       ARC_LENDING_POOL_ADDRESS,
-    abi:           arcadiaVaultAbi,
-    functionName:  'previewDeposit',
-    args:          vaultAmount ? [vaultAmount] : undefined,
-    enabled:       vaultAmount != null,
-    watch:         true,
+    address:      ARC_LENDING_POOL_ADDRESS,
+    abi:          arcadiaVaultAbi,
+    functionName: 'previewDeposit',
+    args:         vaultReady && vaultAmount ? [vaultAmount] : undefined,
+    enabled:      Boolean(vaultReady && vaultAmount),
+    watch:        true,
   })
-  const previewShares = previewSharesBN?.toBigInt()
+  const previewShares = previewSharesBN?.toBigInt() ?? 0n
+
+  // ── Parse + convert redeem input ─────────────────────────────────────
+  const redeemValue = useMemo(() => {
+    const n = Number(redeem)
+    if (isNaN(n) || n <= 0) return undefined
+    try {
+      return utils.parseUnits(redeem, 6)
+    } catch {
+      return undefined
+    }
+  }, [redeem])
 
   // ── Redeem hook ──────────────────────────────────────────────────────
-  const parsedRedeem = parseFloat(redeemAmount)
-  const redeemValue  = !isNaN(parsedRedeem) && parsedRedeem > 0
-    ? BigInt(Math.floor(parsedRedeem * 1e6))
-    : undefined
-
   const { config: redeemCfg } = usePrepareContractWrite({
-    address:       USDEC_ADDRESS,
-    abi:           usdecAbi,
-    functionName:  'redeem',
-    args:          redeemValue ? [redeemValue] : undefined,
-    enabled:       isConnected && onBase && redeemValue != null,
+    address:      USDEC_ADDRESS,
+    abi:          usdecAbi,
+    functionName: 'redeem',
+    args:         redeemValue ? [redeemValue] : undefined,
+    enabled:      isConnected && onBase && Boolean(redeemValue),
   })
   const {
     write:      redeemWrite,
@@ -166,41 +171,42 @@ export default function Home() {
     },
     onError(e) { toast.error('Redeem failed: ' + e.message) },
   })
+  // Optionally, you can wait for redeem confirmation too
 
-  // ── Balances ─────────────────────────────────────────────────────────
+  // ── Balance reads ────────────────────────────────────────────────────
   const usdcBal  = useContractRead({
-    address:       BASE_USDC_ADDRESS,
-    abi:           erc20ABI,
-    functionName:  'balanceOf',
-    args:          [address],
-    enabled:       isConnected,
-    watch:         true,
-  }).data ?? 0n
+    address:      BASE_USDC_ADDRESS,
+    abi:          erc20ABI,
+    functionName: 'balanceOf',
+    args:         [address],
+    enabled:      isConnected,
+    watch:        true,
+  }).data ?? BigNumber.from(0)
 
   const usdecBal = useContractRead({
-    address:       USDEC_ADDRESS,
-    abi:           usdecAbi,
-    functionName:  'balanceOf',
-    args:          [address],
-    enabled:       isConnected,
-    watch:         true,
-  }).data ?? 0n
+    address:      USDEC_ADDRESS,
+    abi:          usdecAbi,
+    functionName: 'balanceOf',
+    args:         [address],
+    enabled:      isConnected,
+    watch:        true,
+  }).data ?? BigNumber.from(0)
 
   const unlocked = useContractRead({
-    address:       USDEC_ADDRESS,
-    abi:           usdecAbi,
-    functionName:  'unlockedBalance',
-    args:          [address],
-    enabled:       isConnected,
-    watch:         true,
-  }).data ?? 0n
+    address:      USDEC_ADDRESS,
+    abi:          usdecAbi,
+    functionName: 'unlockedBalance',
+    args:         [address],
+    enabled:      isConnected,
+    watch:        true,
+  }).data ?? BigNumber.from(0)
 
   const displayUSDC  = (Number(usdcBal)  / 1e6).toFixed(2)
   const displayUSDEC = (Number(usdecBal) / 1e6).toFixed(4)
   const displayUnl   = (Number(unlocked) / 1e6).toFixed(4)
 
-  // reset approval when amount changes
-  useEffect(() => { setHasApp(false) }, [amount])
+  // ── Reset approval when amount changes ───────────────────────────────
+  useEffect(() => { setApp(false) }, [amount])
 
   return (
     <>
@@ -239,13 +245,13 @@ export default function Home() {
                     className="w-full p-2 mb-2 border rounded"
                   />
 
-                  {isValidAmount && vaultAmount != null && (
+                  {isValidAmount && vaultAmount && (
                     <p className="text-gray-700 mb-2">
                       Fee: {(Number(feeAmount)  / 1e6).toFixed(2)} USDC • Vault: {(Number(vaultAmount) / 1e6).toFixed(2)} USDC
                     </p>
                   )}
 
-                  {!vaultReady && vaultAmount != null && (
+                  {!vaultReady && vaultAmount && (
                     <p className="text-red-600 mb-2">
                       After fee, deposit {(Number(vaultAmount)/1e6).toFixed(2)} USDC — must be ≥ 10 USDC.
                     </p>
@@ -299,13 +305,13 @@ export default function Home() {
           <input
             type="number"
             placeholder="Amount to redeem"
-            value={redeemAmount}
+            value={redeem}
             onChange={e => setRedeem(e.target.value)}
             className="w-full p-2 mb-2 border rounded"
           />
           <button
             onClick={() => redeemWrite?.()}
-            disabled={!redeemWrite || isRedeeming || redeemValue == null}
+            disabled={!redeemWrite || isRedeeming || !redeemValue}
             className="w-full p-2 text-white rounded bg-green-600 disabled:bg-gray-400"
           >
             {isRedeeming ? 'Redeeming…' : 'Redeem'}
