@@ -13,20 +13,19 @@ import {
   useWaitForTransaction,
 } from 'wagmi'
 import { erc20ABI } from 'wagmi'
-import { utils } from 'ethers'
 import usdecAbi from '../usdecAbi.json'
 import { allowedUsers } from '../allowlist'
 
-const USDEC_ADDRESS             = '0x94a2134364df27e1df711c1f0ff4b194b3e20660'
-const BASE_USDC_ADDRESS         = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-const ARC_LENDING_POOL_ADDRESS  = '0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1'
-const MIN_INPUT                 = 11     // user enters ≥11 USDC so net ≥10
-const MAX_INPUT                 = 500
-const MINT_FEE_BPS              = 100    // 1%
-const BPS_DENOMINATOR           = 10_000
-const MIN_VAULT_DEPOSIT_AMOUNT  = BigInt(10 * 1e6) // 10 USDC in 6-decimals
+const USDEC_ADDRESS            = '0x94a2134364df27e1df711c1f0ff4b194b3e20660'
+const BASE_USDC_ADDRESS        = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
+const MIN_INPUT                = 11       // user must enter ≥11 USDC so net ≥10
+const MAX_INPUT                = 500      // cap at 500 per mint
+const MINT_FEE_BPS             = 100      // 1%
+const BPS_DENOMINATOR          = 10_000
+const MIN_VAULT_DEPOSIT_AMOUNT = BigInt(10 * 1e6) // 10 USDC in 6-decimals
 
-// Minimal ABI to pull previewDeposit()
+// Optional: minimal ABI to preview shares from Arcadia
+const ARC_LENDING_POOL_ADDRESS = '0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1'
 const arcadiaVaultAbi = [
   {
     inputs: [{ internalType: 'uint256', name: 'assets', type: 'uint256' }],
@@ -39,8 +38,8 @@ const arcadiaVaultAbi = [
 
 export default function Home() {
   const { address, isConnected } = useAccount()
-  const { chain }             = useNetwork()
-  const onBase                = chain?.id === 8453
+  const { chain }               = useNetwork()
+  const onBase                  = chain?.id === 8453
 
   const [amount, setAmount]       = useState('')
   const [redeemAmount, setRedeem] = useState('')
@@ -57,24 +56,23 @@ export default function Home() {
     && parsedAmt >= MIN_INPUT
     && parsedAmt <= MAX_INPUT
 
-  // full raw USDC integer
-  const fullAmount = useMemo(
-    () => isValidAmount ? utils.parseUnits(parsedAmt.toString(), 6) : undefined,
-    [parsedAmt, isValidAmount]
-  )
+  // convert to JS BigInt in USDC microunits
+  const fullAmount = useMemo(() => {
+    if (!isValidAmount) return undefined
+    return BigInt(Math.floor(parsedAmt * 1e6))
+  }, [parsedAmt, isValidAmount])
 
-  // compute fee + net-vault amount
-  const feeAmount   = fullAmount
-    ? fullAmount.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR)
+  // calculate fee + net vault deposit
+  const feeAmount   = fullAmount != null
+    ? (fullAmount * BigInt(MINT_FEE_BPS)) / BigInt(BPS_DENOMINATOR)
     : undefined
-  const vaultAmount = feeAmount && fullAmount
-    ? fullAmount.sub(feeAmount)
+
+  const vaultAmount = fullAmount != null && feeAmount != null
+    ? fullAmount - feeAmount
     : undefined
 
   // check Arcadia’s 10 USDC minimum
-  const vaultReady = vaultAmount
-    ? vaultAmount >= MIN_VAULT_DEPOSIT_AMOUNT
-    : false
+  const vaultReady = vaultAmount != null && vaultAmount >= MIN_VAULT_DEPOSIT_AMOUNT
 
   const isAllowed = address
     ? allowedUsers.includes(address.toLowerCase())
@@ -82,23 +80,23 @@ export default function Home() {
 
   // ── Approval hook ────────────────────────────────────────────────────
   const { config: approveCfg } = usePrepareContractWrite({
-    address:   BASE_USDC_ADDRESS,
-    abi:       erc20ABI,
-    functionName: 'approve',
-    args:      vaultReady && fullAmount ? [USDEC_ADDRESS, fullAmount] : undefined,
-    enabled:   isConnected && onBase && isValidAmount && isAllowed,
+    address:       BASE_USDC_ADDRESS,
+    abi:           erc20ABI,
+    functionName:  'approve',
+    args:          vaultReady && fullAmount ? [USDEC_ADDRESS, fullAmount] : undefined,
+    enabled:       isConnected && onBase && isValidAmount && isAllowed,
   })
   const {
-    write: approveWrite,
-    data:  approveData,
-    isLoading: isApproving
+    write:      approveWrite,
+    data:       approveData,
+    isLoading:  isApproving,
   } = useContractWrite({
     ...approveCfg,
     onSuccess() { toast.success('Approval sent!') },
     onError(e) { toast.error('Approve failed: ' + e.message) },
   })
   useWaitForTransaction({
-    hash: approveData?.hash,
+    hash:       approveData?.hash,
     onSuccess() {
       setHasApp(true)
       toast.success('Approval confirmed!')
@@ -107,16 +105,16 @@ export default function Home() {
 
   // ── Mint hook ────────────────────────────────────────────────────────
   const { config: mintCfg, error: mintPrepError } = usePrepareContractWrite({
-    address:     USDEC_ADDRESS,
-    abi:         usdecAbi,
-    functionName:'mint',
-    args:        vaultReady && fullAmount ? [fullAmount] : undefined,
-    enabled:     isConnected && onBase && isAllowed && hasApproved && vaultReady,
+    address:       USDEC_ADDRESS,
+    abi:           usdecAbi,
+    functionName:  'mint',
+    args:          vaultReady && fullAmount ? [fullAmount] : undefined,
+    enabled:       isConnected && onBase && isAllowed && hasApproved && vaultReady,
   })
   const {
-    write: mintWrite,
-    isLoading: isMinting,
-    data: mintData,
+    write:      mintWrite,
+    isLoading:  isMinting,
+    data:       mintData,
   } = useContractWrite({
     ...mintCfg,
     onSuccess(d) {
@@ -128,33 +126,37 @@ export default function Home() {
     onError(e) { toast.error('Mint failed: ' + e.message) },
   })
   useWaitForTransaction({
-    hash: mintData?.hash,
+    hash:       mintData?.hash,
     onSuccess() { toast.success('Mint confirmed!') },
   })
 
-  // ── previewDeposit (optional) ─────────────────────────────────────────
+  // ── Optional previewDeposit ───────────────────────────────────────────
   const { data: previewSharesBN } = useContractRead({
-    address:   ARC_LENDING_POOL_ADDRESS,
-    abi:       arcadiaVaultAbi,
-    functionName: 'previewDeposit',
-    args:      vaultAmount ? [vaultAmount] : undefined,
-    enabled:   !!vaultAmount,
-    watch:     true,
+    address:       ARC_LENDING_POOL_ADDRESS,
+    abi:           arcadiaVaultAbi,
+    functionName:  'previewDeposit',
+    args:          vaultAmount ? [vaultAmount] : undefined,
+    enabled:       vaultAmount != null,
+    watch:         true,
   })
   const previewShares = previewSharesBN?.toBigInt()
 
   // ── Redeem hook ──────────────────────────────────────────────────────
   const parsedRedeem = parseFloat(redeemAmount)
+  const redeemValue  = !isNaN(parsedRedeem) && parsedRedeem > 0
+    ? BigInt(Math.floor(parsedRedeem * 1e6))
+    : undefined
+
   const { config: redeemCfg } = usePrepareContractWrite({
-    address:      USDEC_ADDRESS,
-    abi:          usdecAbi,
-    functionName: 'redeem',
-    args:         !isNaN(parsedRedeem) ? [utils.parseUnits(parsedRedeem.toString(), 6)] : undefined,
-    enabled:      isConnected && onBase && parsedRedeem > 0,
+    address:       USDEC_ADDRESS,
+    abi:           usdecAbi,
+    functionName:  'redeem',
+    args:          redeemValue ? [redeemValue] : undefined,
+    enabled:       isConnected && onBase && redeemValue != null,
   })
   const {
-    write: redeemWrite,
-    isLoading: isRedeeming
+    write:      redeemWrite,
+    isLoading:  isRedeeming,
   } = useContractWrite({
     ...redeemCfg,
     onSuccess(d) {
@@ -167,37 +169,37 @@ export default function Home() {
 
   // ── Balances ─────────────────────────────────────────────────────────
   const usdcBal  = useContractRead({
-    address: BASE_USDC_ADDRESS,
-    abi:     erc20ABI,
-    functionName: 'balanceOf',
-    args:    [address],
-    enabled: isConnected,
-    watch:   true,
+    address:       BASE_USDC_ADDRESS,
+    abi:           erc20ABI,
+    functionName:  'balanceOf',
+    args:          [address],
+    enabled:       isConnected,
+    watch:         true,
   }).data ?? 0n
 
   const usdecBal = useContractRead({
-    address: USDEC_ADDRESS,
-    abi:     usdecAbi,
-    functionName:'balanceOf',
-    args:    [address],
-    enabled: isConnected,
-    watch:   true,
+    address:       USDEC_ADDRESS,
+    abi:           usdecAbi,
+    functionName:  'balanceOf',
+    args:          [address],
+    enabled:       isConnected,
+    watch:         true,
   }).data ?? 0n
 
   const unlocked = useContractRead({
-    address: USDEC_ADDRESS,
-    abi:     usdecAbi,
-    functionName:'unlockedBalance',
-    args:    [address],
-    enabled: isConnected,
-    watch:   true,
+    address:       USDEC_ADDRESS,
+    abi:           usdecAbi,
+    functionName:  'unlockedBalance',
+    args:          [address],
+    enabled:       isConnected,
+    watch:         true,
   }).data ?? 0n
 
-  const displayUSDC  = (Number(usdcBal)/1e6).toFixed(2)
-  const displayUSDEC = (Number(usdecBal)/1e6).toFixed(4)
-  const displayUnl   = (Number(unlocked)/1e6).toFixed(4)
+  const displayUSDC  = (Number(usdcBal)  / 1e6).toFixed(2)
+  const displayUSDEC = (Number(usdecBal) / 1e6).toFixed(4)
+  const displayUnl   = (Number(unlocked) / 1e6).toFixed(4)
 
-  // reset approval if they change amount
+  // reset approval when amount changes
   useEffect(() => { setHasApp(false) }, [amount])
 
   return (
@@ -205,13 +207,11 @@ export default function Home() {
       <Head>
         <meta charSet="utf-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
-        <title>USDEC – Stablecoin for Creators</title>
+        <title>USDEC – A Stablecoin Built for the Creator Economy</title>
         <link rel="icon" href="/favicon.png"/>
       </Head>
-      <main className="min-h-screen p-4 bg-cover bg-center" style={{
-        backgroundImage: "url('/koru-bg-wide.png')"
-      }}>
-        {/* Logo + Redeem Note */}
+      <main className="min-h-screen p-4 bg-cover bg-center" style={{ backgroundImage: "url('/koru-bg-wide.png')" }}>
+        {/* Logo + Note */}
         <div className="flex flex-col items-center bg-black bg-opacity-60 p-4 rounded-xl my-6">
           <Image src="/usdec-logo-gold.png" width={180} height={180} alt="USDEC"/>
           <p className="text-xs text-gray-200 italic">⏳ redeemable anytime</p>
@@ -238,24 +238,23 @@ export default function Home() {
                     }}
                     className="w-full p-2 mb-2 border rounded"
                   />
-                  {/* fee & vault preview */}
-                  {isValidAmount && vaultAmount && (
+
+                  {isValidAmount && vaultAmount != null && (
                     <p className="text-gray-700 mb-2">
-                      Fee: {(Number(feeAmount)/1e6).toFixed(2)} USDC • Vault: {(Number(vaultAmount)/1e6).toFixed(2)} USDC
+                      Fee: {(Number(feeAmount)  / 1e6).toFixed(2)} USDC • Vault: {(Number(vaultAmount) / 1e6).toFixed(2)} USDC
                     </p>
                   )}
-                  {/* enforce Arcadia min 10 USDC */}
+
                   {!vaultReady && vaultAmount != null && (
                     <p className="text-red-600 mb-2">
-                      After fee, you’d deposit {(Number(vaultAmount)/1e6).toFixed(2)} USDC—must be ≥ 10 USDC.
+                      After fee, deposit {(Number(vaultAmount)/1e6).toFixed(2)} USDC — must be ≥ 10 USDC.
                     </p>
                   )}
-                  {/* mint static-prep errors */}
+
                   {mintPrepError && (
                     <p className="text-red-600 mb-2">{mintPrepError.message}</p>
                   )}
 
-                  {/* approve → mint buttons */}
                   {!hasApproved
                     ? <button
                         onClick={() => approveWrite?.()}
@@ -273,13 +272,11 @@ export default function Home() {
                       </button>
                   }
 
-                  {/* balances */}
                   <div className="mt-4 text-left text-gray-800 text-sm">
                     <p><strong>USDC:</strong> {displayUSDC}</p>
                     <p><strong>USDEC:</strong> {displayUSDEC}</p>
                   </div>
 
-                  {/* tx link */}
                   {txHash && (
                     <a
                       href={`https://basescan.org/tx/${txHash}`}
@@ -308,7 +305,7 @@ export default function Home() {
           />
           <button
             onClick={() => redeemWrite?.()}
-            disabled={!redeemWrite || isRedeeming || isNaN(parsedRedeem) || parsedRedeem <= 0}
+            disabled={!redeemWrite || isRedeeming || redeemValue == null}
             className="w-full p-2 text-white rounded bg-green-600 disabled:bg-gray-400"
           >
             {isRedeeming ? 'Redeeming…' : 'Redeem'}
@@ -331,9 +328,7 @@ export default function Home() {
         </section>
 
         {/* The Koru Symbol */}
-        <section className="max-w-2xl mx-auto p-4 rounded-lg" style={{
-          background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)'
-        }}>
+        <section className="max-w-2xl mx-auto p-4 rounded-lg" style={{ background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)' }}>
           <h3 className="text-xl font-semibold mb-2" style={{ color: '#bc9c22' }}>
             The Koru Symbol
           </h3>
