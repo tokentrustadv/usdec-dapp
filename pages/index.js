@@ -61,7 +61,6 @@ export default function Home() {
   // ── Convert to BigNumber microunits for on-chain ───────────────────────
   const fullAmount = useMemo(() => {
     if (!isValidAmount) return undefined
-    // parseUnits supports up to 6 decimal places
     return utils.parseUnits(parsedAmt.toFixed(6), 6)
   }, [parsedAmt, isValidAmount])
 
@@ -138,7 +137,9 @@ export default function Home() {
     enabled:      Boolean(vaultReady && vaultAmount),
     watch:        true,
   })
-  const previewShares = previewSharesBN?.toBigInt() ?? 0n
+  const previewShares = previewSharesBN
+    ? BigInt(previewSharesBN.toString())
+    : 0n
 
   // ── Parse + convert redeem input ─────────────────────────────────────
   const redeemValue = useMemo(() => {
@@ -171,7 +172,6 @@ export default function Home() {
     },
     onError(e) { toast.error('Redeem failed: ' + e.message) },
   })
-  // Optionally, you can wait for redeem confirmation too
 
   // ── Balance reads ────────────────────────────────────────────────────
   const usdcBal  = useContractRead({
