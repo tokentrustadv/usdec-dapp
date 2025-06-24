@@ -141,6 +141,21 @@ export default function Home() {
     ? BigInt(previewSharesBN.toString())
     : 0n
 
+  // ── Read decimals for debugging ───────────────────────────────────────
+  const { data: decData, isError: decError } = useContractRead({
+    address:      USDEC_ADDRESS,
+    abi:          usdecAbi,
+    functionName: 'decimals',
+    enabled:      isConnected && onBase,
+  })
+  useEffect(() => {
+    if (decError) {
+      console.error('Error reading USDEC.decimals():', decError)
+    } else if (decData != null) {
+      console.log('USDEC.decimals():', decData.toString())
+    }
+  }, [decData, decError])
+
   // ── Parse + convert redeem input ─────────────────────────────────────
   const redeemValue = useMemo(() => {
     const n = Number(redeem)
