@@ -64,10 +64,12 @@ export default function Home() {
     return utils.parseUnits(parsedAmt.toFixed(6), 6)
   }, [parsedAmt, isValidAmount])
 
-  // ── Fee + net deposit calculation ───────────────────────────────────
-  const feeAmount   = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR)
-  const vaultAmount = feeAmount ? fullAmount.sub(feeAmount) : undefined
-  const vaultReady  = vaultAmount?.gte(MIN_VAULT) ?? false
+  // ── Also prepare hex-encoded strings for wagmi args ───────────────────
+  const fullAmountHex  = fullAmount?.toHexString()
+  const feeAmount      = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR)
+  const vaultAmount    = feeAmount ? fullAmount.sub(feeAmount) : undefined
+  const vaultAmountHex = vaultAmount?.toHexString()
+  const vaultReady     = vaultAmount?.gte(MIN_VAULT) ?? false
 
   // ── Allowlist check ──────────────────────────────────────────────────
   const isAllowed = address
@@ -79,7 +81,9 @@ export default function Home() {
     address:      BASE_USDC_ADDRESS,
     abi:          erc20ABI,
     functionName: 'approve',
-    args:         vaultReady && fullAmount ? [USDEC_ADDRESS, fullAmount] : undefined,
+    args:         vaultReady && fullAmountHex
+      ? [USDEC_ADDRESS, fullAmountHex]
+      : undefined,
     enabled:      isConnected && onBase && isValidAmount && isAllowed,
   })
   const {
@@ -89,7 +93,10 @@ export default function Home() {
   } = useContractWrite({
     ...approveCfg,
     onSuccess() { toast.success('Approval sent!') },
-    onError(e) { toast.error('Approve failed: ' + e.message) },
+    onError(e) {
+      console.error('Approve error:', e)
+      toast.error('Approve failed: ' + e.message)
+    },
   })
   useWaitForTransaction({
     hash:    approveData?.hash,
@@ -105,7 +112,9 @@ export default function Home() {
     address:      USDEC_ADDRESS,
     abi:          usdecAbi,
     functionName: 'mint',
-    args:         vaultReady && fullAmount ? [fullAmount] : undefined,
+    args:         vaultReady && fullAmountHex
+      ? [fullAmountHex]
+      : undefined,
     enabled:      isConnected && onBase && isAllowed && hasApproved && vaultReady,
   })
   const {
@@ -120,7 +129,10 @@ export default function Home() {
       setAmount('')
       setApp(false)
     },
-    onError(e) { toast.error('Mint failed: ' + e.message) },
+    onError(e) {
+      console.error('Mint error:', e)
+      toast.error('Mint failed: ' + e.message)
+    },
   })
   useWaitForTransaction({
     hash:    mintData?.hash,
@@ -133,30 +145,17 @@ export default function Home() {
     address:      ARC_LENDING_POOL_ADDRESS,
     abi:          arcadiaVaultAbi,
     functionName: 'previewDeposit',
-    args:         vaultReady && vaultAmount ? [vaultAmount] : undefined,
-    enabled:      Boolean(vaultReady && vaultAmount),
+    args:         vaultReady && vaultAmountHex
+      ? [vaultAmountHex]
+      : undefined,
+    enabled:      Boolean(vaultReady && vaultAmountHex),
     watch:        true,
   })
   const previewShares = previewSharesBN
     ? BigInt(previewSharesBN.toString())
     : 0n
 
-  // ── Read decimals for debugging ───────────────────────────────────────
-  const { data: decData, isError: decError } = useContractRead({
-    address:      USDEC_ADDRESS,
-    abi:          usdecAbi,
-    functionName: 'decimals',
-    enabled:      isConnected && onBase,
-  })
-  useEffect(() => {
-    if (decError) {
-      console.error('Error reading USDEC.decimals():', decError)
-    } else if (decData != null) {
-      console.log('USDEC.decimals():', decData.toString())
-    }
-  }, [decData, decError])
-
-    // ── Read USDC allowance to USDEC ─────────────────────────────────────
+  // ── Read USDC allowance to USDEC for debugging ────────────────────────
   const { data: allowanceBN, isError: allowanceErr } = useContractRead({
     address:      BASE_USDC_ADDRESS,
     abi:          erc20ABI,
@@ -165,11 +164,8 @@ export default function Home() {
     enabled:      isConnected && onBase,
     watch:        true,
   })
-
   useEffect(() => {
-    if (allowanceErr) {
-      console.error('Error reading allowance():', allowanceErr)
-    } else if (allowanceBN != null) {
+    if (!allowanceErr && allowanceBN != null) {
       console.log('USDC allowance → USDEC:', allowanceBN.toString())
     }
   }, [allowanceBN, allowanceErr])
@@ -184,18 +180,19 @@ export default function Home() {
       return undefined
     }
   }, [redeem])
+  const redeemHex = redeemValue?.toHexString()
 
   // ── Redeem hook ──────────────────────────────────────────────────────
   const { config: redeemCfg } = usePrepareContractWrite({
     address:      USDEC_ADDRESS,
     abi:          usdecAbi,
     functionName: 'redeem',
-    args:         redeemValue ? [redeemValue] : undefined,
-    enabled:      isConnected && onBase && Boolean(redeemValue),
+    args:         redeemHex ? [redeemHex] : undefined,
+    enabled:      isConnected && onBase && Boolean(redeemHex),
   })
   const {
-    write:      redeemWrite,
-    isLoading:  isRedeeming,
+    write:     redeemWrite,
+    isLoading: isRedeeming,
   } = useContractWrite({
     ...redeemCfg,
     onSuccess(d) {
@@ -203,7 +200,10 @@ export default function Home() {
       toast.success('Redeem sent!')
       setRedeem('')
     },
-    onError(e) { toast.error('Redeem failed: ' + e.message) },
+    onError(e) {
+      console.error('Redeem error:', e)
+      toast.error('Redeem failed: ' + e.message)
+    },
   })
 
   // ── Balance reads ────────────────────────────────────────────────────
@@ -344,7 +344,7 @@ export default function Home() {
           />
           <button
             onClick={() => redeemWrite?.()}
-            disabled={!redeemWrite || isRedeeming || !redeemValue}
+            disabled={!redeemWrite || isRedeeming || !redeemHex}
             className="w-full p-2 text-white rounded bg-green-600 disabled:bg-gray-400"
           >
             {isRedeeming ? 'Redeeming…' : 'Redeem'}
