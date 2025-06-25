@@ -156,6 +156,24 @@ export default function Home() {
     }
   }, [decData, decError])
 
+    // ── Read USDC allowance to USDEC ─────────────────────────────────────
+  const { data: allowanceBN, isError: allowanceErr } = useContractRead({
+    address:      BASE_USDC_ADDRESS,
+    abi:          erc20ABI,
+    functionName: 'allowance',
+    args:         [address, USDEC_ADDRESS],
+    enabled:      isConnected && onBase,
+    watch:        true,
+  })
+
+  useEffect(() => {
+    if (allowanceErr) {
+      console.error('Error reading allowance():', allowanceErr)
+    } else if (allowanceBN != null) {
+      console.log('USDC allowance → USDEC:', allowanceBN.toString())
+    }
+  }, [allowanceBN, allowanceErr])
+
   // ── Parse + convert redeem input ─────────────────────────────────────
   const redeemValue = useMemo(() => {
     const n = Number(redeem)
