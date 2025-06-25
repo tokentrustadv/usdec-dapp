@@ -18,65 +18,70 @@ import usdecAbi from '../usdecAbi.json'
 import { allowedUsers } from '../allowlist'
 
 // Contract addresses & constants
-const USDEC_ADDRESS            = '0x94a2134364df27e1df711c1f0ff4b194b3e20660'
-const BASE_USDC_ADDRESS        = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-const MIN_INPUT                = 11      // user must enter ≥11 USDC so net ≥10
-const MAX_INPUT                = 500     // cap per mint
-const MINT_FEE_BPS             = 100     // 1%
-const BPS_DENOMINATOR          = 10_000
-// 10 USDC minimum into vault, in 6 decimals
-const MIN_VAULT                = utils.parseUnits('10', 6)
+const USDEC_ADDRESS     = '0xa2f1531026d768420e2e3904e820f5a205ad5b7d'
+const BASE_USDC_ADDRESS = '0xefe32813dba3a783059d50e5358b9e3661218dad'
+const MIN_INPUT         = 11      // user must enter ≥11 USDC so net ≥10
+const MAX_INPUT         = 500     // cap per mint
+const MINT_FEE_BPS      = 100     // 1%
+const BPS_DENOMINATOR   = 10_000
+const MIN_VAULT         = utils.parseUnits('10', 6) // 10 USDC in microunits
 
-// Arcadia previewDeposit ABI
+// Arcadia vault ABI (previewDeposit + asset)
 const ARC_LENDING_POOL_ADDRESS = '0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1'
-const arcadiaVaultAbi = [{
-  inputs:    [{ internalType: 'uint256', name: 'assets', type: 'uint256' }],
-  name:      'previewDeposit',
-  outputs:   [{ internalType: 'uint256', name: '',      type: 'uint256' }],
-  stateMutability: 'view',
-  type:      'function',
-}]
+const arcadiaVaultAbi = [
+  {
+    inputs:    [{ internalType: 'uint256', name: 'assets', type: 'uint256' }],
+    name:      'previewDeposit',
+    outputs:   [{ internalType: 'uint256', name: '',      type: 'uint256' }],
+    stateMutability: 'view',
+    type:      'function',
+  },
+  {
+    inputs:    [],
+    name:      'asset',
+    outputs:   [{ internalType: 'address', name: '', type: 'address' }],
+    stateMutability: 'view',
+    type:      'function',
+  },
+]
 
 export default function Home() {
   const { address, isConnected } = useAccount()
   const { chain }               = useNetwork()
   const onBase                  = chain?.id === 8453
 
-  // ── Component state ─────────────────────────────────────────────────
-  const [amount, setAmount]   = useState('')
-  const [redeem, setRedeem]   = useState('')
-  const [txHash, setTxHash]   = useState('')
-  const [hasApproved, setApp] = useState(false)
+  // Component state
+  const [amount, setAmount]       = useState('')
+  const [redeem, setRedeem]       = useState('')
+  const [txHash, setTxHash]       = useState('')
+  const [hasApproved, setApp]     = useState(false)
 
-  // ── Parse + validate mint input ──────────────────────────────────────
+  // Parse + validate mint input
   const parsedAmt = useMemo(() => {
     const n = Number(amount)
     return isNaN(n) ? NaN : n
   }, [amount])
+  const isValidAmount = !isNaN(parsedAmt) &&
+    parsedAmt >= MIN_INPUT &&
+    parsedAmt <= MAX_INPUT
 
-  const isValidAmount = !isNaN(parsedAmt)
-    && parsedAmt >= MIN_INPUT
-    && parsedAmt <= MAX_INPUT
-
-  // ── Convert to BigNumber microunits for on-chain ───────────────────────
+  // Build on-chain values
   const fullAmount = useMemo(() => {
     if (!isValidAmount) return undefined
     return utils.parseUnits(parsedAmt.toFixed(6), 6)
   }, [parsedAmt, isValidAmount])
-
-  // ── Also prepare hex-encoded strings for wagmi args ───────────────────
   const fullAmountHex  = fullAmount?.toHexString()
   const feeAmount      = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR)
   const vaultAmount    = feeAmount ? fullAmount.sub(feeAmount) : undefined
   const vaultAmountHex = vaultAmount?.toHexString()
   const vaultReady     = vaultAmount?.gte(MIN_VAULT) ?? false
 
-  // ── Allowlist check ──────────────────────────────────────────────────
+  // Allowlist check
   const isAllowed = address
     ? allowedUsers.map(a => a.toLowerCase()).includes(address.toLowerCase())
     : false
 
-  // ── Approval hook ────────────────────────────────────────────────────
+  // Approval hook
   const { config: approveCfg } = usePrepareContractWrite({
     address:      BASE_USDC_ADDRESS,
     abi:          erc20ABI,
@@ -86,11 +91,7 @@ export default function Home() {
       : undefined,
     enabled:      isConnected && onBase && isValidAmount && isAllowed,
   })
-  const {
-    write:     approveWrite,
-    data:      approveData,
-    isLoading: isApproving,
-  } = useContractWrite({
+  const { write: approveWrite, data: approveData, isLoading: isApproving } = useContractWrite({
     ...approveCfg,
     onSuccess() { toast.success('Approval sent!') },
     onError(e) {
@@ -107,7 +108,7 @@ export default function Home() {
     },
   })
 
-  // ── Mint hook ────────────────────────────────────────────────────────
+  // Mint hook
   const { config: mintCfg, error: mintPrepError } = usePrepareContractWrite({
     address:      USDEC_ADDRESS,
     abi:          usdecAbi,
@@ -117,11 +118,7 @@ export default function Home() {
       : undefined,
     enabled:      isConnected && onBase && isAllowed && hasApproved && vaultReady,
   })
-  const {
-    write:     mintWrite,
-    isLoading: isMinting,
-    data:      mintData,
-  } = useContractWrite({
+  const { write: mintWrite, isLoading: isMinting, data: mintData } = useContractWrite({
     ...mintCfg,
     onSuccess(d) {
       setTxHash(d.hash)
@@ -140,7 +137,7 @@ export default function Home() {
     onSuccess() { toast.success('Mint confirmed!') },
   })
 
-  // ── Preview shares hook ──────────────────────────────────────────────
+  // Preview shares hook
   const { data: previewSharesBN } = useContractRead({
     address:      ARC_LENDING_POOL_ADDRESS,
     abi:          arcadiaVaultAbi,
@@ -155,7 +152,22 @@ export default function Home() {
     ? BigInt(previewSharesBN.toString())
     : 0n
 
-  // ── Read USDC allowance to USDEC for debugging ────────────────────────
+  // Read vault’s underlying asset
+  const { data: assetAddr, isError: assetErr } = useContractRead({
+    address:      ARC_LENDING_POOL_ADDRESS,
+    abi:          arcadiaVaultAbi,
+    functionName: 'asset',
+    enabled:      isConnected && onBase,
+  })
+  useEffect(() => {
+    if (assetErr) {
+      console.error('Error reading vault asset():', assetErr)
+    } else if (assetAddr) {
+      console.log('Vault expects asset token at:', assetAddr)
+    }
+  }, [assetAddr, assetErr])
+
+  // Read USDC allowance → USDEC
   const { data: allowanceBN, isError: allowanceErr } = useContractRead({
     address:      BASE_USDC_ADDRESS,
     abi:          erc20ABI,
@@ -170,7 +182,7 @@ export default function Home() {
     }
   }, [allowanceBN, allowanceErr])
 
-  // ── Parse + convert redeem input ─────────────────────────────────────
+  // Parse + convert redeem input
   const redeemValue = useMemo(() => {
     const n = Number(redeem)
     if (isNaN(n) || n <= 0) return undefined
@@ -182,7 +194,7 @@ export default function Home() {
   }, [redeem])
   const redeemHex = redeemValue?.toHexString()
 
-  // ── Redeem hook ──────────────────────────────────────────────────────
+  // Redeem hook
   const { config: redeemCfg } = usePrepareContractWrite({
     address:      USDEC_ADDRESS,
     abi:          usdecAbi,
@@ -190,10 +202,7 @@ export default function Home() {
     args:         redeemHex ? [redeemHex] : undefined,
     enabled:      isConnected && onBase && Boolean(redeemHex),
   })
-  const {
-    write:     redeemWrite,
-    isLoading: isRedeeming,
-  } = useContractWrite({
+  const { write: redeemWrite, isLoading: isRedeeming } = useContractWrite({
     ...redeemCfg,
     onSuccess(d) {
       setTxHash(d.hash)
@@ -206,7 +215,7 @@ export default function Home() {
     },
   })
 
-  // ── Balance reads ────────────────────────────────────────────────────
+  // Balance reads
   const usdcBal  = useContractRead({
     address:      BASE_USDC_ADDRESS,
     abi:          erc20ABI,
@@ -238,8 +247,10 @@ export default function Home() {
   const displayUSDEC = (Number(usdecBal) / 1e6).toFixed(4)
   const displayUnl   = (Number(unlocked) / 1e6).toFixed(4)
 
-  // ── Reset approval when amount changes ───────────────────────────────
-  useEffect(() => { setApp(false) }, [amount])
+  // Reset approval when amount changes
+  useEffect(() => {
+    setApp(false)
+  }, [amount])
 
   return (
     <>
@@ -255,7 +266,6 @@ export default function Home() {
           <Image src="/usdec-logo-gold.png" width={180} height={180} alt="USDEC"/>
           <p className="text-xs text-gray-200 italic">⏳ redeemable anytime</p>
         </div>
-
         {/* Mint Section */}
         <section className="bg-white bg-opacity-90 p-6 rounded-2xl shadow-xl max-w-sm mx-auto mb-6 text-center">
           <ConnectButton/>
@@ -277,23 +287,17 @@ export default function Home() {
                     }}
                     className="w-full p-2 mb-2 border rounded"
                   />
-
                   {isValidAmount && vaultAmount && (
                     <p className="text-gray-700 mb-2">
-                      Fee: {(Number(feeAmount)  / 1e6).toFixed(2)} USDC • Vault: {(Number(vaultAmount) / 1e6).toFixed(2)} USDC
+                      Fee: {(Number(feeAmount) / 1e6).toFixed(2)} USDC • Vault: {(Number(vaultAmount) / 1e6).toFixed(2)} USDC
                     </p>
                   )}
-
                   {!vaultReady && vaultAmount && (
                     <p className="text-red-600 mb-2">
-                      After fee, deposit {(Number(vaultAmount)/1e6).toFixed(2)} USDC — must be ≥ 10 USDC.
+                      After fee, deposit {(Number(vaultAmount) / 1e6).toFixed(2)} USDC — must be ≥ 10 USDC.
                     </p>
                   )}
-
-                  {mintPrepError && (
-                    <p className="text-red-600 mb-2">{mintPrepError.message}</p>
-                  )}
-
+                  {mintPrepError && <p className="text-red-600 mb-2">{mintPrepError.message}</p>}
                   {!hasApproved
                     ? <button
                         onClick={() => approveWrite?.()}
@@ -310,12 +314,10 @@ export default function Home() {
                         {isMinting ? 'Minting…' : 'Mint'}
                       </button>
                   }
-
                   <div className="mt-4 text-left text-gray-800 text-sm">
                     <p><strong>USDC:</strong> {displayUSDC}</p>
                     <p><strong>USDEC:</strong> {displayUSDEC}</p>
                   </div>
-
                   {txHash && (
                     <a
                       href={`https://basescan.org/tx/${txHash}`}
@@ -330,7 +332,6 @@ export default function Home() {
             </>
           )}
         </section>
-
         {/* Redeem Section */}
         <section className="bg-white bg-opacity-90 p-6 rounded-2xl shadow-xl max-w-sm mx-auto mb-6 text-center">
           <h3 className="font-semibold mb-1">Redeem USDEC</h3>
@@ -350,7 +351,6 @@ export default function Home() {
             {isRedeeming ? 'Redeeming…' : 'Redeem'}
           </button>
         </section>
-
         {/* Vault Info */}
         <section className="bg-white bg-opacity-90 p-4 rounded-xl shadow-lg max-w-sm mx-auto mb-6 text-center">
           <h3 className="font-semibold mb-1">Vault Info</h3>
@@ -365,7 +365,6 @@ export default function Home() {
             View Today’s APY
           </a>
         </section>
-
         {/* The Koru Symbol */}
         <section className="max-w-2xl mx-auto p-4 rounded-lg" style={{ background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)' }}>
           <h3 className="text-xl font-semibold mb-2" style={{ color: '#bc9c22' }}>
