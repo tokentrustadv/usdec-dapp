@@ -19,7 +19,8 @@ import { allowedUsers } from '../allowlist'
 
 // Contract addresses & constants
 const USDEC_ADDRESS     = '0xa2f1531026d768420e2e3904e820f5a205ad5b7d'
-const BASE_USDC_ADDRESS = '0xefe32813dba3a783059d50e5358b9e3661218dad'
+const TRANCHE_ADDRESS   = '0xefe32813dba3a783059d50e5358b9e3661218dad'  // your Senior‐Tranche token
+const RAW_USDC_ADDRESS  = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'  // Base USDC
 const MIN_INPUT         = 11      // user must enter ≥11 USDC so net ≥10
 const MAX_INPUT         = 500     // cap per mint
 const MINT_FEE_BPS      = 100     // 1%
@@ -81,9 +82,48 @@ export default function Home() {
     ? allowedUsers.map(a => a.toLowerCase()).includes(address.toLowerCase())
     : false
 
+  // Read raw USDC balance
+  const { data: rawUsdcBN } = useContractRead({
+    address:     RAW_USDC_ADDRESS,
+    abi:         erc20ABI,
+    functionName:'balanceOf',
+    args:        [address],
+    enabled:     isConnected && onBase,
+    watch:       true,
+  })
+  const displayRawUsdc = rawUsdcBN
+    ? (Number(rawUsdcBN) / 1e6).toFixed(2)
+    : '0.00'
+
+  // Read tranche (vault asset) balance
+  const { data: trancheBN } = useContractRead({
+    address:     TRANCHE_ADDRESS,
+    abi:         erc20ABI,
+    functionName:'balanceOf',
+    args:        [address],
+    enabled:     isConnected && onBase,
+    watch:       true,
+  })
+  const displayTranche = trancheBN
+    ? (Number(trancheBN) / 1e6).toFixed(2)
+    : '0.00'
+
+  // Read minted USDEC balance
+  const { data: usdecBalBN } = useContractRead({
+    address:      USDEC_ADDRESS,
+    abi:          usdecAbi,
+    functionName: 'balanceOf',
+    args:         [address],
+    enabled:      isConnected && onBase,
+    watch:        true,
+  })
+  const displayUsdec = usdecBalBN
+    ? (Number(usdecBalBN) / 1e6).toFixed(4)
+    : '0.0000'
+
   // Approval hook
   const { config: approveCfg } = usePrepareContractWrite({
-    address:      BASE_USDC_ADDRESS,
+    address:      TRANCHE_ADDRESS,
     abi:          erc20ABI,
     functionName: 'approve',
     args:         vaultReady && fullAmountHex
@@ -152,45 +192,12 @@ export default function Home() {
     ? BigInt(previewSharesBN.toString())
     : 0n
 
-  // Read vault’s underlying asset
-  const { data: assetAddr, isError: assetErr } = useContractRead({
-    address:      ARC_LENDING_POOL_ADDRESS,
-    abi:          arcadiaVaultAbi,
-    functionName: 'asset',
-    enabled:      isConnected && onBase,
-  })
-  useEffect(() => {
-    if (assetErr) {
-      console.error('Error reading vault asset():', assetErr)
-    } else if (assetAddr) {
-      console.log('Vault expects asset token at:', assetAddr)
-    }
-  }, [assetAddr, assetErr])
-
-  // Read USDC allowance → USDEC
-  const { data: allowanceBN, isError: allowanceErr } = useContractRead({
-    address:      BASE_USDC_ADDRESS,
-    abi:          erc20ABI,
-    functionName: 'allowance',
-    args:         [address, USDEC_ADDRESS],
-    enabled:      isConnected && onBase,
-    watch:        true,
-  })
-  useEffect(() => {
-    if (!allowanceErr && allowanceBN != null) {
-      console.log('USDC allowance → USDEC:', allowanceBN.toString())
-    }
-  }, [allowanceBN, allowanceErr])
-
-  // Parse + convert redeem input
+  // Redeem parsing
   const redeemValue = useMemo(() => {
     const n = Number(redeem)
-    if (isNaN(n) || n <= 0) return undefined
-    try {
-      return utils.parseUnits(redeem, 6)
-    } catch {
-      return undefined
-    }
+    return isNaN(n) || n <= 0
+      ? undefined
+      : utils.parseUnits(redeem, 6)
   }, [redeem])
   const redeemHex = redeemValue?.toHexString()
 
@@ -215,38 +222,6 @@ export default function Home() {
     },
   })
 
-  // Balance reads
-  const usdcBal  = useContractRead({
-    address:      BASE_USDC_ADDRESS,
-    abi:          erc20ABI,
-    functionName: 'balanceOf',
-    args:         [address],
-    enabled:      isConnected,
-    watch:        true,
-  }).data ?? BigNumber.from(0)
-
-  const usdecBal = useContractRead({
-    address:      USDEC_ADDRESS,
-    abi:          usdecAbi,
-    functionName: 'balanceOf',
-    args:         [address],
-    enabled:      isConnected,
-    watch:        true,
-  }).data ?? BigNumber.from(0)
-
-  const unlocked = useContractRead({
-    address:      USDEC_ADDRESS,
-    abi:          usdecAbi,
-    functionName: 'unlockedBalance',
-    args:         [address],
-    enabled:      isConnected,
-    watch:        true,
-  }).data ?? BigNumber.from(0)
-
-  const displayUSDC  = (Number(usdcBal)  / 1e6).toFixed(2)
-  const displayUSDEC = (Number(usdecBal) / 1e6).toFixed(4)
-  const displayUnl   = (Number(unlocked) / 1e6).toFixed(4)
-
   // Reset approval when amount changes
   useEffect(() => {
     setApp(false)
@@ -266,6 +241,15 @@ export default function Home() {
           <Image src="/usdec-logo-gold.png" width={180} height={180} alt="USDEC"/>
           <p className="text-xs text-gray-200 italic">⏳ redeemable anytime</p>
         </div>
+
+        {/* Balances Overview */}
+        <section className="bg-white bg-opacity-90 p-4 rounded-xl shadow-lg max-w-sm mx-auto mb-6 text-left">
+          <h3 className="font-semibold mb-2">Your Balances</h3>
+          <p><strong>Raw USDC:</strong> {displayRawUsdc}</p>
+          <p><strong>Tranche USDC:</strong> {displayTranche}</p>
+          <p><strong>Minted USDEC:</strong> {displayUsdec}</p>
+        </section>
+
         {/* Mint Section */}
         <section className="bg-white bg-opacity-90 p-6 rounded-2xl shadow-xl max-w-sm mx-auto mb-6 text-center">
           <ConnectButton/>
@@ -279,7 +263,7 @@ export default function Home() {
                     type="number"
                     min={MIN_INPUT}
                     max={MAX_INPUT}
-                    placeholder={`Enter ${MIN_INPUT}–${MAX_INPUT} USDC (you have ${displayUSDC})`}
+                    placeholder={`Enter ${MIN_INPUT}–${MAX_INPUT} USDC (you have ${displayTranche})`}
                     value={amount}
                     onChange={e => {
                       const v = e.target.value
@@ -287,17 +271,21 @@ export default function Home() {
                     }}
                     className="w-full p-2 mb-2 border rounded"
                   />
+
                   {isValidAmount && vaultAmount && (
                     <p className="text-gray-700 mb-2">
-                      Fee: {(Number(feeAmount) / 1e6).toFixed(2)} USDC • Vault: {(Number(vaultAmount) / 1e6).toFixed(2)} USDC
+                      Fee: {(Number(feeAmount)  / 1e6).toFixed(2)} USDC • Vault: {(Number(vaultAmount) / 1e6).toFixed(2)} USDC
                     </p>
                   )}
+
                   {!vaultReady && vaultAmount && (
                     <p className="text-red-600 mb-2">
-                      After fee, deposit {(Number(vaultAmount) / 1e6).toFixed(2)} USDC — must be ≥ 10 USDC.
+                      After fee, deposit {(Number(vaultAmount)/1e6).toFixed(2)} USDC — must be ≥ 10 USDC.
                     </p>
                   )}
+
                   {mintPrepError && <p className="text-red-600 mb-2">{mintPrepError.message}</p>}
+
                   {!hasApproved
                     ? <button
                         onClick={() => approveWrite?.()}
@@ -314,10 +302,7 @@ export default function Home() {
                         {isMinting ? 'Minting…' : 'Mint'}
                       </button>
                   }
-                  <div className="mt-4 text-left text-gray-800 text-sm">
-                    <p><strong>USDC:</strong> {displayUSDC}</p>
-                    <p><strong>USDEC:</strong> {displayUSDEC}</p>
-                  </div>
+
                   {txHash && (
                     <a
                       href={`https://basescan.org/tx/${txHash}`}
@@ -332,10 +317,11 @@ export default function Home() {
             </>
           )}
         </section>
+
         {/* Redeem Section */}
         <section className="bg-white bg-opacity-90 p-6 rounded-2xl shadow-xl max-w-sm mx-auto mb-6 text-center">
           <h3 className="font-semibold mb-1">Redeem USDEC</h3>
-          <p className="text-sm mb-2">Unlocked: {displayUnl} USDEC</p>
+          <p className="text-sm mb-2">Unlocked: {displayUsdec}</p>
           <input
             type="number"
             placeholder="Amount to redeem"
@@ -351,6 +337,7 @@ export default function Home() {
             {isRedeeming ? 'Redeeming…' : 'Redeem'}
           </button>
         </section>
+
         {/* Vault Info */}
         <section className="bg-white bg-opacity-90 p-4 rounded-xl shadow-lg max-w-sm mx-auto mb-6 text-center">
           <h3 className="font-semibold mb-1">Vault Info</h3>
@@ -365,6 +352,7 @@ export default function Home() {
             View Today’s APY
           </a>
         </section>
+
         {/* The Koru Symbol */}
         <section className="max-w-2xl mx-auto p-4 rounded-lg" style={{ background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)' }}>
           <h3 className="text-xl font-semibold mb-2" style={{ color: '#bc9c22' }}>
