@@ -18,7 +18,7 @@ import usdecAbi from '../usdecAbi.json'
 import { allowedUsers } from '../allowlist'
 
 // Addresses & constants
-const USDEC_ADDRESS     = '0xa2f1531026d768420e2e3904e820f5a205ad5b7d'
+const USDEC_ADDRESS     = '0x60C0a6A4Aa343D26D248d0D04BbD6429FA3eeE12'
 const RAW_USDC_ADDRESS  = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 const MIN_INPUT         = 11
 const MAX_INPUT         = 500
