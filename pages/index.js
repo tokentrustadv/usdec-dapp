@@ -13,7 +13,7 @@ import {
   useWaitForTransaction,
 } from 'wagmi'
 import { erc20ABI } from 'wagmi'
-import { utils, BigNumber } from 'ethers'
+import { utils } from 'ethers'
 import usdecAbi from '../usdecAbi.json'
 import { allowedUsers } from '../allowlist'
 
@@ -22,13 +22,13 @@ const USDEC_ADDRESS            = '0x67B9F920f86dd6483513d046CdA954D7a50EB18E'
 const RAW_USDC_ADDRESS         = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 const ARC_LENDING_POOL_ADDRESS = '0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1'
 
-const MIN_INPUT       = 11      // user must enter ≥11 so net≥10
+const MIN_INPUT       = 11      // user must enter ≥11 so net ≥10
 const MAX_INPUT       = 500
 const MINT_FEE_BPS    = 100     // 1%
 const BPS_DENOMINATOR = 10_000
 const MIN_VAULT_USDC  = utils.parseUnits('10', 6) // 10 USDC
 
-// Arcadia-vault ABI (we need previewDeposit + asset)
+// Arcadia-vault ABI (previewDeposit + asset)
 const arcadiaVaultAbi = [
   {
     inputs:    [{ internalType: 'uint256', name: 'assets', type: 'uint256' }],
@@ -69,10 +69,10 @@ export default function Home() {
     return utils.parseUnits(parsedAmt.toFixed(6), 6)
   }, [parsedAmt, isValidAmount])
 
-  const feeAmount = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR)
-  const vaultAmount = feeAmount ? fullAmount.sub(feeAmount) : undefined
+  const feeAmount    = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR)
+  const vaultAmount  = feeAmount ? fullAmount.sub(feeAmount) : undefined
   const vaultAmountHex = vaultAmount?.toHexString()
-  const vaultReady = vaultAmount?.gte(MIN_VAULT_USDC) ?? false
+  const vaultReady   = vaultAmount?.gte(MIN_VAULT_USDC) ?? false
 
   // ── Allow‐list check ─────────────────────────────────────────────────
   const isAllowed = address
@@ -119,6 +119,45 @@ export default function Home() {
     : 0n
 
   const hasPreviewShares = previewShares > 0n
+
+  // ── Read vault’s underlying asset() ─────────────────────────────────
+  const { data: assetAddress, isError: assetErr } = useContractRead({
+    address:      ARC_LENDING_POOL_ADDRESS,
+    abi:          arcadiaVaultAbi,
+    functionName: 'asset',
+    enabled:      isConnected && onBase,
+  })
+  useEffect(() => {
+    if (assetErr) {
+      console.error('Error reading vault asset():', assetErr)
+    } else if (assetAddress) {
+      console.log('Arcadia vault asset():', assetAddress)
+    }
+  }, [assetAddress, assetErr])
+
+  // ── Read what USDEC thinks its usdc() and lendingPool() are ─────────
+  const usdecSimpleAbi = [
+    { inputs: [], name: 'usdc',        outputs: [{ internalType: 'address', name: '', type: 'address' }], stateMutability: 'view', type: 'function' },
+    { inputs: [], name: 'lendingPool', outputs: [{ internalType: 'address', name: '', type: 'address' }], stateMutability: 'view', type: 'function' },
+  ]
+  const { data: usdcAddr } = useContractRead({
+    address:      USDEC_ADDRESS,
+    abi:          usdecSimpleAbi,
+    functionName: 'usdc',
+    enabled:      isConnected && onBase,
+  })
+  const { data: lendingPoolAddr } = useContractRead({
+    address:      USDEC_ADDRESS,
+    abi:          usdecSimpleAbi,
+    functionName: 'lendingPool',
+    enabled:      isConnected && onBase,
+  })
+  useEffect(() => {
+    if (usdcAddr && lendingPoolAddr) {
+      console.log('USDEC.usdc()        →', usdcAddr)
+      console.log('USDEC.lendingPool() →', lendingPoolAddr)
+    }
+  }, [usdcAddr, lendingPoolAddr])
 
   // ── Approval (raw USDC → USDEC) ───────────────────────────────────────
   const { config: approveCfg } = usePrepareContractWrite({
@@ -317,16 +356,21 @@ export default function Home() {
           <p className="text-sm">Name: Arcadia USDC Vault</p>
           <p className="text-sm">Platform: Arcadia Finance</p>
           <p className="text-sm">Network: Base</p>
-          <a href="https://arcadia.finance/pool/8453/0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1"
-             target="_blank" rel="noopener noreferrer"
-             className="text-xs text-blue-600 underline">
+          <a
+            href="https://arcadia.finance/pool/8453/0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-blue-600 underline"
+          >
             View Today’s APY
           </a>
         </section>
 
         {/* The Koru Symbol */}
-        <section className="max-w-2xl mx-auto p-4 rounded-lg"
-                 style={{ background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)' }}>
+        <section
+          className="max-w-2xl mx-auto p-4 rounded-lg"
+          style={{ background: 'linear-gradient(to right, #1a1a1a, #2c2c2c)' }}
+        >
           <h3 className="text-xl font-semibold mb-2" style={{ color: '#bc9c22' }}>
             The Koru Symbol
           </h3>
