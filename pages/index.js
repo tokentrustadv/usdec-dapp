@@ -1,6 +1,6 @@
 // pages/index.js
 import Head from 'next/head'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import Image from 'next/image'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 import toast from 'react-hot-toast'
@@ -38,9 +38,9 @@ const arcadiaVaultAbi = [
     type:      'function',
   },
   {
-    inputs:    [],
+    inputs: [],
     name:      'asset',
-    outputs:   [{ internalType: 'address', name: '', type: 'address' }],
+    outputs:  [{ internalType: 'address', name: '', type: 'address' }],
     stateMutability: 'view',
     type:      'function',
   },
@@ -51,18 +51,17 @@ export default function Home() {
   const { chain }               = useNetwork()
   const onBase                  = chain?.id === 8453
 
-  // ── Component state ─────────────────────────────────────────────────
   const [amount, setAmount]   = useState('')
   const [redeem, setRedeem]   = useState('')
   const [txHash, setTxHash]   = useState('')
 
-  // ── Parse + validate mint input ─────────────────────────────────────
+  // ── Validate input ───────────────────────────────────────────────────
   const parsedAmt = useMemo(() => Number(amount), [amount])
   const isValidAmount = !isNaN(parsedAmt)
     && parsedAmt >= MIN_INPUT
     && parsedAmt <= MAX_INPUT
 
-  // ── Convert to microunits + compute fee + net for deposit ──────────
+  // ── Compute on‐chain values ──────────────────────────────────────────
   const fullAmount = useMemo(() => {
     if (!isValidAmount) return undefined
     return utils.parseUnits(parsedAmt.toFixed(6), 6)
@@ -78,7 +77,7 @@ export default function Home() {
     ? allowedUsers.map(a => a.toLowerCase()).includes(address.toLowerCase())
     : false
 
-  // ── Raw USDC balance ─────────────────────────────────────────────────
+  // ── Read balances ────────────────────────────────────────────────────
   const { data: rawUsdcBN } = useContractRead({
     address:      RAW_USDC_ADDRESS,
     abi:          erc20ABI,
@@ -91,7 +90,6 @@ export default function Home() {
     ? (Number(rawUsdcBN) / 1e6).toFixed(2)
     : '0.00'
 
-  // ── USDEC balance ────────────────────────────────────────────────────
   const { data: usdecBalBN } = useContractRead({
     address:      USDEC_ADDRESS,
     abi:          usdecAbi,
@@ -127,19 +125,16 @@ export default function Home() {
     enabled:      isConnected && onBase && Boolean(fullAmount),
     watch:        true,
   })
-  // allowanceBN may be a JS BigInt or an ethers BigNumber
-  // Normalize to JS BigInt for comparison:
+  // Convert ethers.BigNumber to JS BigInt
   const allowanceBI = allowanceBN
-    ? (typeof allowanceBN === 'bigint'
-        ? allowanceBN
-        : BigInt(allowanceBN.toString()))
+    ? BigInt(allowanceBN.toString())
     : 0n
   const fullBI = fullAmount
     ? BigInt(fullAmount.toString())
     : 0n
   const hasAllowance = allowanceBI >= fullBI
 
-  // ── Approval (USDC → USDEC) ──────────────────────────────────────────
+  // ── Approve USDC → USDEC ────────────────────────────────────────────
   const { config: approveCfg } = usePrepareContractWrite({
     address:      RAW_USDC_ADDRESS,
     abi:          erc20ABI,
@@ -158,7 +153,7 @@ export default function Home() {
     onSuccess() { toast.success('Approval confirmed!') },
   })
 
-  // ── Mint (USDEC.mint) ───────────────────────────────────────────────
+  // ── Mint USDEC ──────────────────────────────────────────────────────
   const { config: mintCfg, error: mintPrepError } = usePrepareContractWrite({
     address:      USDEC_ADDRESS,
     abi:          usdecAbi,
@@ -186,7 +181,7 @@ export default function Home() {
     onSuccess() { toast.success('Mint confirmed!') },
   })
 
-  // ── Redeem (USDEC.redeem) ────────────────────────────────────────────
+  // ── Redeem USDEC ────────────────────────────────────────────────────
   const redeemValue = useMemo(() => {
     const n = Number(redeem)
     return isNaN(n) || n <= 0 ? undefined : utils.parseUnits(redeem, 6)
