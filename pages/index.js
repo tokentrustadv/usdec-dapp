@@ -19,7 +19,7 @@ import { allowedUsers } from '../allowlist'
 
 // ── Addresses & constants ─────────────────────────────────────────────
 // Your deployed USDEC contract
-const USDEC_ADDRESS            = '0x67B9F920f86dd6483513d046CdA954D7a50EB18E'
+const USDEC_ADDRESS            = '0xe82267f3768DabB19E521626782B06C66536177A'
 // The *underlying* USDC that the tranche/vault accepts
 const RAW_USDC_ADDRESS         = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 // **Senior‐Tranche** contract (must be the Arcadia tranche you used on Basescan)
