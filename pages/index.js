@@ -18,20 +18,17 @@ import usdecAbi from '../usdecAbi.json'
 import { allowedUsers } from '../allowlist'
 
 // ── Addresses & constants ─────────────────────────────────────────────
-// Your deployed USDEC contract
 const USDEC_ADDRESS            = '0xe82267f3768DabB19E521626782B06C66536177A'
-// The *underlying* USDC that the tranche/vault accepts
 const RAW_USDC_ADDRESS         = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
-// **Senior‐Tranche** contract (must be the Arcadia tranche you used on Basescan)
 const ARC_LENDING_POOL_ADDRESS = '0xEFE32813dBA3A783059d50e5358b9e3661218daD'
 
-const MIN_INPUT       = 11
+const MIN_INPUT       = 11      // user must enter ≥11 so net ≥10
 const MAX_INPUT       = 500
-const MINT_FEE_BPS    = 100
+const MINT_FEE_BPS    = 100     // 1%
 const BPS_DENOMINATOR = 10_000
-const MIN_VAULT_USDC  = utils.parseUnits('10', 6)
+const MIN_VAULT_USDC  = utils.parseUnits('10', 6) // 10 USDC
 
-// We only need previewDeposit() and asset() from the tranche
+// Arcadia-vault ABI (previewDeposit + asset)
 const arcadiaVaultAbi = [
   {
     inputs:    [{ internalType: 'uint256', name: 'assets', type: 'uint256' }],
@@ -54,35 +51,34 @@ export default function Home() {
   const { chain }               = useNetwork()
   const onBase                  = chain?.id === 8453
 
-  // ── State ────────────────────────────────────────────────────────────
+  // ── Component state ─────────────────────────────────────────────────
   const [amount, setAmount]   = useState('')
   const [redeem, setRedeem]   = useState('')
   const [txHash, setTxHash]   = useState('')
-  const [hasApproved, setApp] = useState(false)
 
-  // ── Input validation ─────────────────────────────────────────────────
+  // ── Parse + validate mint input ─────────────────────────────────────
   const parsedAmt = useMemo(() => Number(amount), [amount])
   const isValidAmount = !isNaN(parsedAmt)
     && parsedAmt >= MIN_INPUT
     && parsedAmt <= MAX_INPUT
 
-  // ── On‐chain values ──────────────────────────────────────────────────
+  // ── Convert to microunits + compute fee + net for deposit ──────────
   const fullAmount = useMemo(() => {
     if (!isValidAmount) return undefined
     return utils.parseUnits(parsedAmt.toFixed(6), 6)
   }, [parsedAmt, isValidAmount])
 
-  const feeAmount     = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR)
-  const vaultAmount   = feeAmount ? fullAmount.sub(feeAmount) : undefined
-  const vaultAmountHex= vaultAmount?.toHexString()
-  const vaultReady    = vaultAmount?.gte(MIN_VAULT_USDC) ?? false
+  const feeAmount    = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR)
+  const vaultAmount  = feeAmount ? fullAmount.sub(feeAmount) : undefined
+  const vaultAmountHex = vaultAmount?.toHexString()
+  const vaultReady   = vaultAmount?.gte(MIN_VAULT_USDC) ?? false
 
-  // ── Allowlist ────────────────────────────────────────────────────────
+  // ── Allowlist check ─────────────────────────────────────────────────
   const isAllowed = address
     ? allowedUsers.map(a => a.toLowerCase()).includes(address.toLowerCase())
     : false
 
-  // ── Balances ─────────────────────────────────────────────────────────
+  // ── Raw USDC balance ─────────────────────────────────────────────────
   const { data: rawUsdcBN } = useContractRead({
     address:      RAW_USDC_ADDRESS,
     abi:          erc20ABI,
@@ -95,6 +91,7 @@ export default function Home() {
     ? (Number(rawUsdcBN) / 1e6).toFixed(2)
     : '0.00'
 
+  // ── USDEC balance ────────────────────────────────────────────────────
   const { data: usdecBalBN } = useContractRead({
     address:      USDEC_ADDRESS,
     abi:          usdecAbi,
@@ -121,6 +118,17 @@ export default function Home() {
     : 0n
   const hasPreviewShares = previewShares > 0n
 
+  // ── On-chain USDC allowance for USDEC ────────────────────────────────
+  const { data: allowanceBN } = useContractRead({
+    address:      RAW_USDC_ADDRESS,
+    abi:          erc20ABI,
+    functionName: 'allowance',
+    args:         [address, USDEC_ADDRESS],
+    enabled:      isConnected && onBase && Boolean(fullAmount),
+    watch:        true,
+  })
+  const hasAllowance = allowanceBN?.gte(fullAmount) ?? false
+
   // ── Approval (USDC → USDEC) ──────────────────────────────────────────
   const { config: approveCfg } = usePrepareContractWrite({
     address:      RAW_USDC_ADDRESS,
@@ -129,22 +137,18 @@ export default function Home() {
     args:         fullAmount ? [USDEC_ADDRESS, fullAmount] : undefined,
     enabled:      isConnected && onBase && isValidAmount && isAllowed,
   })
-  const { write: approveWrite, data: approveData, isLoading: isApproving } =
-    useContractWrite({
-      ...approveCfg,
-      onSuccess() { toast.success('Approval sent!') },
-      onError(e)  { toast.error('Approve failed: ' + e.message) },
-    })
+  const { write: approveWrite, isLoading: isApproving } = useContractWrite({
+    ...approveCfg,
+    onSuccess() { toast.success('Approval sent!') },
+    onError(e)  { toast.error('Approve failed: ' + e.message) },
+  })
   useWaitForTransaction({
-    hash:    approveData?.hash,
-    enabled: Boolean(approveData?.hash),
-    onSuccess() {
-      setApp(true)
-      toast.success('Approval confirmed!')
-    },
+    hash:    approveWrite?.hash,
+    enabled: Boolean(approveWrite),
+    onSuccess() { toast.success('Approval confirmed!') },
   })
 
-  // ── Mint (USDEC.mint) ────────────────────────────────────────────────
+  // ── Mint (USDEC.mint) ───────────────────────────────────────────────
   const { config: mintCfg, error: mintPrepError } = usePrepareContractWrite({
     address:      USDEC_ADDRESS,
     abi:          usdecAbi,
@@ -153,24 +157,22 @@ export default function Home() {
     enabled:      isConnected
                  && onBase
                  && isAllowed
-                 && hasApproved
+                 && hasAllowance
                  && vaultReady
                  && hasPreviewShares,
   })
-  const { write: mintWrite, isLoading: isMinting, data: mintData } =
-    useContractWrite({
-      ...mintCfg,
-      onSuccess(d) {
-        setTxHash(d.hash)
-        toast.success('Mint tx sent!')
-        setAmount('')
-        setApp(false)
-      },
-      onError(e) { toast.error('Mint failed: ' + e.message) },
-    })
+  const { write: mintWrite, isLoading: isMinting } = useContractWrite({
+    ...mintCfg,
+    onSuccess(d) {
+      setTxHash(d.hash)
+      toast.success('Mint tx sent!')
+      setAmount('')
+    },
+    onError(e) { toast.error('Mint failed: ' + e.message) },
+  })
   useWaitForTransaction({
-    hash:    mintData?.hash,
-    enabled: Boolean(mintData?.hash),
+    hash:    mintWrite?.hash,
+    enabled: Boolean(mintWrite),
     onSuccess() { toast.success('Mint confirmed!') },
   })
 
@@ -187,19 +189,20 @@ export default function Home() {
     args:         redeemHex ? [redeemHex] : undefined,
     enabled:      isConnected && onBase && Boolean(redeemHex),
   })
-  const { write: redeemWrite, isLoading: isRedeeming } =
-    useContractWrite({
-      ...redeemCfg,
-      onSuccess(d) {
-        setTxHash(d.hash)
-        toast.success('Redeem sent!')
-        setRedeem('')
-      },
-      onError(e) { toast.error('Redeem failed: ' + e.message) },
-    })
+  const { write: redeemWrite, isLoading: isRedeeming } = useContractWrite({
+    ...redeemCfg,
+    onSuccess(d) {
+      setTxHash(d.hash)
+      toast.success('Redeem sent!')
+      setRedeem('')
+    },
+    onError(e) { toast.error('Redeem failed: ' + e.message) },
+  })
 
-  // ── Reset approval on amount change ─────────────────────────────────
-  useEffect(() => { setApp(false) }, [amount])
+  // ── Reset allowances on amount change ───────────────────────────────
+  useEffect(() => {
+    // no local approved flag to reset
+  }, [amount])
 
   return (
     <>
@@ -228,73 +231,71 @@ export default function Home() {
 
         {/* Mint Section */}
         <section className="bg-white bg-opacity-90 p-6 rounded-2xl shadow-xl max-w-sm mx-auto mb-6 text-center">
-          <ConnectButton />
+          <ConnectButton/>
           {isConnected && (
             <>
               {!onBase && <p className="text-red-600 mb-2">Switch to Base network.</p>}
-              {!isAllowed ? (
-                <p className="text-red-600 mb-4">🚫 Not allow-listed.</p>
-              ) : (
-                <>
-                  <input
-                    type="number"
-                    min={MIN_INPUT}
-                    max={MAX_INPUT}
-                    placeholder={`Enter ${MIN_INPUT}–${MAX_INPUT} USDC (you have ${displayRawUsdc})`}
-                    value={amount}
-                    onChange={e => {
-                      const v = e.target.value
-                      if (v === '' || /^\d*(\.\d{0,6})?$/.test(v)) setAmount(v)
-                    }}
-                    className="w-full p-2 mb-2 border rounded"
-                  />
+              {!isAllowed
+                ? <p className="text-red-600 mb-4">🚫 Not allow-listed.</p>
+                : <>
+                    <input
+                      type="number"
+                      min={MIN_INPUT}
+                      max={MAX_INPUT}
+                      placeholder={`Enter ${MIN_INPUT}–${MAX_INPUT} USDC (you have ${displayRawUsdc})`}
+                      value={amount}
+                      onChange={e => {
+                        const v = e.target.value
+                        if (v === '' || /^\d*(\.\d{0,6})?$/.test(v)) setAmount(v)
+                      }}
+                      className="w-full p-2 mb-2 border rounded"
+                    />
 
-                  {isValidAmount && vaultAmount && (
-                    <p className="text-gray-700 mb-2">
-                      Fee: {(Number(feeAmount) / 1e6).toFixed(2)} USDC • Vault: {(Number(vaultAmount) / 1e6).toFixed(2)} USDC
-                    </p>
-                  )}
+                    {isValidAmount && vaultAmount && (
+                      <p className="text-gray-700 mb-2">
+                        Fee: {(Number(feeAmount)/1e6).toFixed(2)} USDC • Vault: {(Number(vaultAmount)/1e6).toFixed(2)} USDC
+                      </p>
+                    )}
 
-                  {vaultReady && !hasPreviewShares && (
-                    <p className="text-red-600 mb-2">
-                      Deposit too small to mint any shares, try a larger amount.
-                    </p>
-                  )}
+                    {vaultReady && !hasPreviewShares && (
+                      <p className="text-red-600 mb-2">
+                        Deposit too small to mint any shares, try a larger amount.
+                      </p>
+                    )}
 
-                  {mintPrepError && (
-                    <p className="text-red-600 mb-2">{mintPrepError.message}</p>
-                  )}
+                    {mintPrepError && (
+                      <p className="text-red-600 mb-2">{mintPrepError.message}</p>
+                    )}
 
-                  {!hasApproved ? (
-                    <button
-                      onClick={() => approveWrite?.()}
-                      disabled={!approveWrite || isApproving || !isValidAmount}
-                      className="w-full p-2 mb-2 text-white rounded bg-yellow-600 disabled:bg-gray-400"
-                    >
-                      {isApproving ? 'Approving…' : 'Approve USDC'}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => mintWrite?.()}
-                      disabled={!mintWrite || isMinting || !vaultReady || !hasPreviewShares}
-                      className="w-full p-2 text-white rounded bg-blue-600 disabled:bg-gray-400"
-                    >
-                      {isMinting ? 'Minting…' : 'Mint'}
-                    </button>
-                  )}
+                    {!hasAllowance
+                      ? <button
+                          onClick={() => approveWrite?.()}
+                          disabled={!approveWrite || isApproving || !isValidAmount}
+                          className="w-full p-2 mb-2 text-white rounded bg-yellow-600 disabled:bg-gray-400"
+                        >
+                          {isApproving ? 'Approving…' : 'Approve USDC'}
+                        </button>
+                      : <button
+                          onClick={() => mintWrite?.()}
+                          disabled={!mintWrite || isMinting || !vaultReady || !hasPreviewShares}
+                          className="w-full p-2 text-white rounded bg-blue-600 disabled:bg-gray-400"
+                        >
+                          {isMinting ? 'Minting…' : 'Mint'}
+                        </button>
+                    }
 
-                  {txHash && (
-                    <a
-                      href={`https://basescan.org/tx/${txHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 underline text-sm mt-2 block"
-                    >
-                      View tx →
-                    </a>
-                  )}
-                </>
-              )}
+                    {txHash && (
+                      <a
+                        href={`https://basescan.org/tx/${txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 underline text-sm mt-2 block"
+                      >
+                        View tx →
+                      </a>
+                    )}
+                  </>
+              }
             </>
           )}
         </section>
