@@ -68,17 +68,17 @@ export default function Home() {
     return utils.parseUnits(parsedAmt.toFixed(6), 6)
   }, [parsedAmt, isValidAmount])
 
-  const feeAmount    = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR)
-  const vaultAmount  = feeAmount ? fullAmount.sub(feeAmount) : undefined
-  const vaultAmountHex = vaultAmount?.toHexString()
-  const vaultReady   = vaultAmount?.gte(MIN_VAULT_USDC) ?? false
+  const feeAmount     = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR)
+  const vaultAmount   = feeAmount ? fullAmount.sub(feeAmount) : undefined
+  const vaultAmountHex= vaultAmount?.toHexString()
+  const vaultReady    = vaultAmount?.gte(MIN_VAULT_USDC) ?? false
 
   // ── Allowlist check ─────────────────────────────────────────────────
   const isAllowed = address
     ? allowedUsers.map(a => a.toLowerCase()).includes(address.toLowerCase())
     : false
 
-  // ── Raw USDC balance ─────────────────────────────────────────────────
+  // ── Balances ─────────────────────────────────────────────────────────
   const { data: rawUsdcBN } = useContractRead({
     address:      RAW_USDC_ADDRESS,
     abi:          erc20ABI,
@@ -91,7 +91,6 @@ export default function Home() {
     ? (Number(rawUsdcBN) / 1e6).toFixed(2)
     : '0.00'
 
-  // ── USDEC balance ────────────────────────────────────────────────────
   const { data: usdecBalBN } = useContractRead({
     address:      USDEC_ADDRESS,
     abi:          usdecAbi,
@@ -127,7 +126,11 @@ export default function Home() {
     enabled:      isConnected && onBase && Boolean(fullAmount),
     watch:        true,
   })
-  const hasAllowance = allowanceBN?.gte(fullAmount) ?? false
+  // allowanceBN is a JS BigInt; compare to fullAmount.toBigInt()
+  const hasAllowance =
+    allowanceBN != null &&
+    fullAmount != null &&
+    allowanceBN >= fullAmount.toBigInt()
 
   // ── Approval (USDC → USDEC) ──────────────────────────────────────────
   const { config: approveCfg } = usePrepareContractWrite({
@@ -199,11 +202,6 @@ export default function Home() {
     onError(e) { toast.error('Redeem failed: ' + e.message) },
   })
 
-  // ── Reset allowances on amount change ───────────────────────────────
-  useEffect(() => {
-    // no local approved flag to reset
-  }, [amount])
-
   return (
     <>
       <Head>
@@ -253,7 +251,7 @@ export default function Home() {
 
                     {isValidAmount && vaultAmount && (
                       <p className="text-gray-700 mb-2">
-                        Fee: {(Number(feeAmount)/1e6).toFixed(2)} USDC • Vault: {(Number(vaultAmount)/1e6).toFixed(2)} USDC
+                        Fee: {(Number(feeAmount) / 1e6).toFixed(2)} USDC • Vault: {(Number(vaultAmount) / 1e6).toFixed(2)} USDC
                       </p>
                     )}
 
@@ -304,16 +302,16 @@ export default function Home() {
         <section className="bg-white bg-opacity-90 p-6 rounded-2xl shadow-xl max-w-sm mx-auto mb-6 text-center">
           <h3 className="font-semibold mb-1">Redeem USDEC</h3>
           <input
-            type="number"
-            placeholder="Amount to redeem"
-            value={redeem}
-            onChange={e => setRedeem(e.target.value)}
-            className="w-full p-2 mb-2 border rounded"
+            type="number"`
+            placeholder="Amount to redeem"`
+            value={redeem}`
+            onChange={e => setRedeem(e.target.value)}`
+            className="w-full p-2 mb-2 border rounded"`
           />
-          <button
-            onClick={() => redeemWrite?.()}
-            disabled={!redeemWrite || isRedeeming || !redeemHex}
-            className="w-full p-2 text-white rounded bg-green-600 disabled:bg-gray-400"
+          <button`
+            onClick={() => redeemWrite?.()}`
+            disabled={!redeemWrite || isRedeeming || !redeemHex}`
+            className="w-full p-2 text-white rounded bg-green-600 disabled:bg-gray-400"`
           >
             {isRedeeming ? 'Redeeming…' : 'Redeem'}
           </button>
