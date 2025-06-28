@@ -1,4 +1,4 @@
-// pages/index.js
+"use client";
 
 import Head from 'next/head';
 import { useState, useMemo } from 'react';
@@ -18,8 +18,19 @@ import { ethers } from 'ethers';
 import usdecAbi from '../usdecAbi.json';
 import { allowedUsers } from '../allowlist';
 
+// ── Arcadia vault ABI fragment ─────────────────────────────────────────
+const arcadiaVaultAbi = [
+  {
+    inputs:    [{ internalType: 'uint256', name: 'assets', type: 'uint256' }],
+    name:      'previewDeposit',
+    outputs:   [{ internalType: 'uint256', name: '',      type: 'uint256' }],
+    stateMutability: 'view',
+    type:      'function',
+  },
+];
+
 // ── Addresses & constants ─────────────────────────────────────────────
-const USDEC_ADDRESS            = '0xCb651e6d17b12498069C1a627a3f1912b5E6f16f';
+const USDEC_ADDRESS            = '0xcb651e6d17b12498069c1a627a3f1912b5e6f16f';
 const RAW_USDC_ADDRESS         = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 const ARC_LENDING_POOL_ADDRESS = '0xEFE32813dBA3A783059d50e5358b9e3661218daD';
 
@@ -87,30 +98,20 @@ export default function Home() {
     ? Number(ethers.utils.formatUnits(usdecBalBN, 6)).toFixed(4)
     : '0.0000';
 
-  // ── Preview shares ───────────────────────────────────────────────────
-  const vaultAmountHex = vaultAmount?.toHexString();
+  // ── Preview shares (guarded) ──────────────────────────────────────────
+  const previewArgs = vaultReady ? [vaultAmount] : undefined;
   const { data: previewSharesBN } = useContractRead({
     address:      ARC_LENDING_POOL_ADDRESS,
-    abi:          [
-      {
-        inputs: [{ internalType: 'uint256', name: 'assets', type: 'uint256' }],
-        name: 'previewDeposit',
-        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
-        stateMutability: 'view',
-        type: 'function',
-      }
-    ],
+    abi:          arcadiaVaultAbi,
     functionName: 'previewDeposit',
-    args:         vaultReady && vaultAmountHex ? [vaultAmountHex] : undefined,
-    enabled:      Boolean(vaultReady && vaultAmountHex),
+    args:         previewArgs,
+    enabled:      Boolean(previewArgs),
     watch:        true,
   });
-  const previewShares = previewSharesBN
-    ? BigInt(previewSharesBN.toString())
-    : 0n;
+  const previewShares    = previewSharesBN ? BigInt(previewSharesBN.toString()) : 0n;
   const hasPreviewShares = previewShares > 0n;
 
-  // ── On-chain USDC allowance ──────────────────────────────────────────
+  // ── USDC allowance ────────────────────────────────────────────────────
   const { data: allowanceBN } = useContractRead({
     address:      RAW_USDC_ADDRESS,
     abi:          erc20ABI,
@@ -122,7 +123,7 @@ export default function Home() {
   const hasAllowance = allowanceBN &&
     BigInt(allowanceBN.toString()) >= BigInt(fullAmount?.toString() || '0');
 
-  // ── Approve USDC → USDEC ────────────────────────────────────────────
+  // ── Approve USDC → USDEC ─────────────────────────────────────────────
   const { config: approveCfg } = usePrepareContractWrite({
     address:      RAW_USDC_ADDRESS,
     abi:          erc20ABI,
