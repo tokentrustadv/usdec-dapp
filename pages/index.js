@@ -14,7 +14,7 @@ import {
   useWaitForTransaction,
 } from 'wagmi';
 import { erc20ABI } from 'wagmi';
-import { parseUnits, formatUnits, utils } from 'ethers/lib/utils';
+import { ethers } from 'ethers';
 import usdecAbi from '../usdecAbi.json';
 import { allowedUsers } from '../allowlist';
 
@@ -27,7 +27,7 @@ const MIN_INPUT       = 11;
 const MAX_INPUT       = 500;
 const MINT_FEE_BPS    = 100;
 const BPS_DENOMINATOR = 10_000;
-const MIN_VAULT_USDC  = utils.parseUnits('10', 6);
+const MIN_VAULT_USDC  = ethers.utils.parseUnits('10', 6);
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -38,7 +38,7 @@ export default function Home() {
   const [redeem, setRedeem] = useState('');
   const [txHash, setTxHash] = useState('');
 
-  // ── Validate input ───────────────────────────────────────────────────
+  // ── Validate & parse input ─────────────────────────────────────────────
   const parsedAmt = useMemo(() => Number(amount), [amount]);
   const isValidAmount = !isNaN(parsedAmt) &&
                         parsedAmt >= MIN_INPUT &&
@@ -46,7 +46,7 @@ export default function Home() {
 
   const fullAmount = useMemo(() => {
     if (!isValidAmount) return;
-    return parseUnits(parsedAmt.toFixed(6), 6);
+    return ethers.utils.parseUnits(parsedAmt.toFixed(6), 6);
   }, [parsedAmt, isValidAmount]);
 
   const feeAmount   = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR);
@@ -72,7 +72,7 @@ export default function Home() {
     watch:        true,
   });
   const displayRawUsdc = rawUsdcBN
-    ? Number(formatUnits(rawUsdcBN, 6)).toFixed(2)
+    ? Number(ethers.utils.formatUnits(rawUsdcBN, 6)).toFixed(2)
     : '0.00';
 
   const { data: usdecBalBN } = useContractRead({
@@ -84,7 +84,7 @@ export default function Home() {
     watch:        true,
   });
   const displayUsdec = usdecBalBN
-    ? Number(formatUnits(usdecBalBN, 6)).toFixed(4)
+    ? Number(ethers.utils.formatUnits(usdecBalBN, 6)).toFixed(4)
     : '0.0000';
 
   // ── Preview shares ───────────────────────────────────────────────────
@@ -172,7 +172,9 @@ export default function Home() {
   // ── Redeem USDEC ────────────────────────────────────────────────────
   const redeemValue = useMemo(() => {
     const n = Number(redeem);
-    return isNaN(n) || n <= 0 ? undefined : parseUnits(redeem, 6);
+    return isNaN(n) || n <= 0
+      ? undefined
+      : ethers.utils.parseUnits(redeem, 6);
   }, [redeem]);
   const redeemHex = redeemValue?.toHexString();
   const { config: redeemCfg } = usePrepareContractWrite({
