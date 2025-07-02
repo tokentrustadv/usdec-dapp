@@ -23,7 +23,8 @@ const BASE_CHAIN_ID = Number(process.env.NEXT_PUBLIC_BASE_CHAIN_ID || '8453');
 const USDEC_ADDRESS = process.env.NEXT_PUBLIC_USDEC_ADDRESS || '';
 const RAW_USDC_ADDRESS = process.env.NEXT_PUBLIC_RAW_USDC_ADDRESS || '';
 const ARC_LENDING_POOL_ADDRESS =
-  process.env.NEXT_PUBLIC_ARC_LENDING_POOL_ADDRESS || '';
+  process.env.NEXT_PUBLIC_ARC_LENDING_POOL_ADDRESS ||
+  '0x3ec4a293Fb906DD2Cd440c20dECB250DeF141dF1';
 
 const MIN_INPUT = 11;
 const MAX_INPUT = 500;
@@ -138,8 +139,7 @@ export default function Home() {
   });
   const hasAllowance =
     allowanceBN &&
-    BigInt(allowanceBN.toString()) >=
-      BigInt(fullAmount?.toString() || '0');
+    BigInt(allowanceBN.toString()) >= BigInt(fullAmount?.toString() || '0');
 
   // ── Approve USDC → USDEC ─────────────────────────────────────────────
   const approveArgs =
@@ -215,9 +215,8 @@ export default function Home() {
       return undefined;
     }
   }, [redeem]);
-  const redeemArgs = isConnected && onBase && redeemValue
-    ? [redeemValue]
-    : undefined;
+  const redeemArgs =
+    isConnected && onBase && redeemValue ? [redeemValue] : undefined;
   const { config: redeemCfg } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -252,9 +251,7 @@ export default function Home() {
           name="viewport"
           content="width=device-width, initial-scale=1"
         />
-        <title>
-          USDEC – A Stablecoin Built for the Creator Economy
-        </title>
+        <title>USDEC – A Stablecoin Built for the Creator Economy</title>
         <link rel="icon" href="/favicon.png" />
       </Head>
 
@@ -314,7 +311,7 @@ export default function Home() {
                       const v = e.target.value;
                       if (
                         v === '' ||
-                        /^\d*(\.\d{0,6})?$/.test(v)
+                        /^\d*(\.\d{0,6})?$/.test(v) 
                       )
                         setAmount(v);
                     }}
@@ -354,9 +351,7 @@ export default function Home() {
 
                   {!hasAllowance ? (
                     <button
-                      onClick={() =>
-                        approveWrite?.()
-                      }
+                      onClick={() => approveWrite?.()}
                       disabled={
                         !approveWrite ||
                         isApproving ||
@@ -370,9 +365,7 @@ export default function Home() {
                     </button>
                   ) : (
                     <button
-                      onClick={() =>
-                        mintWrite?.()
-                      }
+                      onClick={() => mintWrite?.()}
                       disabled={
                         !mintWrite ||
                         isMinting ||
@@ -433,12 +426,12 @@ export default function Home() {
           </p>
           <p className="text-sm">Network: Base</p>
           <a
-            href={`https://arcadia.finance/pool/${BASE_CHAIN_ID}/${ARC_LENDING_POOL_ADDRESS}`}
+            href="https://base.blockscout.com/address/0xEFE32813dBA3A783059d50e5358b9e3661218daD?tab=txs"
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-blue-600 underline"
           >
-            View Today’s APY
+            View Tranche TXS
           </a>
         </section>
 
