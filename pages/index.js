@@ -18,142 +18,174 @@ import { ethers } from 'ethers';
 import usdecAbi from '../usdecAbi.json';
 import { allowedUsers } from '../allowlist';
 
-// ── Arcadia vault ABI fragment ─────────────────────────────────────────
-const arcadiaVaultAbi = [
-  {
-    inputs:    [{ internalType: 'uint256', name: 'assets', type: 'uint256' }],
-    name:      'previewDeposit',
-    outputs:   [{ internalType: 'uint256', name: '',      type: 'uint256' }],
-    stateMutability: 'view',
-    type:      'function',
-  },
-];
+// ── Config & Constants ─────────────────────────────────────────────────
+const BASE_CHAIN_ID = Number(process.env.NEXT_PUBLIC_BASE_CHAIN_ID || '8453');
+const USDEC_ADDRESS = process.env.NEXT_PUBLIC_USDEC_ADDRESS!;
+const RAW_USDC_ADDRESS = process.env.NEXT_PUBLIC_RAW_USDC_ADDRESS!;
+const ARC_LENDING_POOL_ADDRESS = process.env.NEXT_PUBLIC_ARC_LENDING_POOL_ADDRESS!;
 
-// ── Addresses & constants ─────────────────────────────────────────────
-const USDEC_ADDRESS            = '0xcb651e6d17b12498069c1a627a3f1912b5e6f16f';
-const RAW_USDC_ADDRESS         = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
-const ARC_LENDING_POOL_ADDRESS = '0xEFE32813dBA3A783059d50e5358b9e3661218daD';
-
-const MIN_INPUT       = 11;
-const MAX_INPUT       = 500;
-const MINT_FEE_BPS    = 100;
+const MIN_INPUT = 11;
+const MAX_INPUT = 500;
+const MINT_FEE_BPS = 100;
 const BPS_DENOMINATOR = 10_000;
-const MIN_VAULT_USDC  = ethers.utils.parseUnits('10', 6);
+const MIN_VAULT_USDC = ethers.utils.parseUnits('10', 6);
+
+// ── Allowlist Set ───────────────────────────────────────────────────────
+const allowedSet = new Set(allowedUsers.map((a) => a.toLowerCase()));
+
+// ── Custom Hook ────────────────────────────────────────────────────────
+function useIsBaseNetwork(chain: ReturnType<typeof useNetwork>['chain']) {
+  return chain?.id === BASE_CHAIN_ID;
+}
 
 export default function Home() {
   const { address, isConnected } = useAccount();
-  const { chain }               = useNetwork();
-  const onBase                  = chain?.id === 8453;
+  const { chain } = useNetwork();
+  const onBase = useIsBaseNetwork(chain);
 
   const [amount, setAmount] = useState('');
   const [redeem, setRedeem] = useState('');
   const [txHash, setTxHash] = useState('');
 
-  // ── Validate & parse input ─────────────────────────────────────────────
-  const parsedAmt = useMemo(() => Number(amount), [amount]);
-  const isValidAmount = !isNaN(parsedAmt) &&
-                        parsedAmt >= MIN_INPUT &&
-                        parsedAmt <= MAX_INPUT;
-
+  // ── Parse & Validate USDC Amount ──────────────────────────────────────
   const fullAmount = useMemo(() => {
-    if (!isValidAmount) return;
-    return ethers.utils.parseUnits(parsedAmt.toFixed(6), 6);
-  }, [parsedAmt, isValidAmount]);
+    try {
+      return ethers.utils.parseUnits(amount || '0', 6);
+    } catch {
+      return undefined;
+    }
+  }, [amount]);
 
-  const feeAmount   = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR);
-  const vaultAmount = feeAmount ? fullAmount.sub(feeAmount) : undefined;
-  const vaultReady  = vaultAmount?.gte(MIN_VAULT_USDC) ?? false;
-
-  // ── Allowlist as Set ─────────────────────────────────────────────────
-  const allowedSet = useMemo(
-    () => new Set(allowedUsers.map(a => a.toLowerCase())),
-    []
+  const isValidAmount = useMemo(
+    () =>
+      fullAmount &&
+      fullAmount.gte(ethers.utils.parseUnits(MIN_INPUT.toString(), 6)) &&
+      fullAmount.lte(ethers.utils.parseUnits(MAX_INPUT.toString(), 6)),
+    [fullAmount]
   );
+
+  const feeAmount = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR);
+  const vaultAmount = feeAmount ? fullAmount.sub(feeAmount) : undefined;
+  const vaultReady = vaultAmount?.gte(MIN_VAULT_USDC) ?? false;
+
   const isAllowed = address
     ? allowedSet.has(address.toLowerCase())
     : false;
 
-  // ── Read balances ────────────────────────────────────────────────────
-  const { data: rawUsdcBN } = useContractRead({
-    address:      RAW_USDC_ADDRESS,
-    abi:          erc20ABI,
+  // ── Read Raw USDC & USDEC Balances ───────────────────────────────────
+  const {
+    data: rawUsdcBN,
+    isLoading: loadingRawUsdc,
+    isError: errorRawUsdc,
+  } = useContractRead({
+    address: RAW_USDC_ADDRESS,
+    abi: erc20ABI,
     functionName: 'balanceOf',
-    args:         [address],
-    enabled:      isConnected && onBase,
-    watch:        true,
+    args: [address],
+    enabled: isConnected && onBase,
+    watch: true,
   });
-  const displayRawUsdc = rawUsdcBN
-    ? Number(ethers.utils.formatUnits(rawUsdcBN, 6)).toFixed(2)
-    : '0.00';
+  const displayRawUsdc = loadingRawUsdc
+    ? 'Loading…'
+    : errorRawUsdc
+      ? 'Error'
+      : Number(ethers.utils.formatUnits(rawUsdcBN || 0, 6)).toFixed(2);
 
-  const { data: usdecBalBN } = useContractRead({
-    address:      USDEC_ADDRESS,
-    abi:          usdecAbi,
+  const {
+    data: usdecBalBN,
+    isLoading: loadingUsdec,
+    isError: errorUsdec,
+  } = useContractRead({
+    address: USDEC_ADDRESS,
+    abi: usdecAbi,
     functionName: 'balanceOf',
-    args:         [address],
-    enabled:      isConnected && onBase,
-    watch:        true,
+    args: [address],
+    enabled: isConnected && onBase,
+    watch: true,
   });
-  const displayUsdec = usdecBalBN
-    ? Number(ethers.utils.formatUnits(usdecBalBN, 6)).toFixed(4)
-    : '0.0000';
+  const displayUsdec = loadingUsdec
+    ? 'Loading…'
+    : errorUsdec
+      ? 'Error'
+      : Number(ethers.utils.formatUnits(usdecBalBN || 0, 6)).toFixed(4);
 
-  // ── Preview shares (guarded) ──────────────────────────────────────────
+  // ── Preview Deposit Shares ────────────────────────────────────────────
   const previewArgs = vaultReady ? [vaultAmount] : undefined;
-  const { data: previewSharesBN } = useContractRead({
-    address:      ARC_LENDING_POOL_ADDRESS,
-    abi:          arcadiaVaultAbi,
+  const {
+    data: previewSharesBN,
+    isError: previewError,
+  } = useContractRead({
+    address: ARC_LENDING_POOL_ADDRESS,
+    abi: [
+      {
+        inputs: [{ internalType: 'uint256', name: 'assets', type: 'uint256' }],
+        name: 'previewDeposit',
+        outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
+        stateMutability: 'view',
+        type: 'function',
+      },
+    ],
     functionName: 'previewDeposit',
-    args:         previewArgs,
-    enabled:      Boolean(previewArgs),
-    watch:        true,
+    args: previewArgs,
+    enabled: Boolean(previewArgs),
+    watch: true,
   });
-  const previewShares    = previewSharesBN ? BigInt(previewSharesBN.toString()) : 0n;
+  const previewShares = previewSharesBN
+    ? BigInt(previewSharesBN.toString())
+    : 0n;
   const hasPreviewShares = previewShares > 0n;
 
-  // ── USDC allowance ────────────────────────────────────────────────────
+  // ── USDC Allowance ───────────────────────────────────────────────────
   const { data: allowanceBN } = useContractRead({
-    address:      RAW_USDC_ADDRESS,
-    abi:          erc20ABI,
+    address: RAW_USDC_ADDRESS,
+    abi: erc20ABI,
     functionName: 'allowance',
-    args:         [address, USDEC_ADDRESS],
-    enabled:      isConnected && onBase && Boolean(fullAmount),
-    watch:        true,
+    args: [address, USDEC_ADDRESS],
+    enabled: isConnected && onBase && Boolean(fullAmount),
+    watch: true,
   });
-  const hasAllowance = allowanceBN &&
+  const hasAllowance =
+    allowanceBN &&
     BigInt(allowanceBN.toString()) >= BigInt(fullAmount?.toString() || '0');
 
   // ── Approve USDC → USDEC ─────────────────────────────────────────────
   const { config: approveCfg } = usePrepareContractWrite({
-    address:      RAW_USDC_ADDRESS,
-    abi:          erc20ABI,
+    address: RAW_USDC_ADDRESS,
+    abi: erc20ABI,
     functionName: 'approve',
-    args:         fullAmount ? [USDEC_ADDRESS, fullAmount] : undefined,
-    enabled:      isConnected && onBase && isValidAmount && isAllowed,
+    args: fullAmount ? [USDEC_ADDRESS, fullAmount] : undefined,
+    enabled: isConnected && onBase && isValidAmount && isAllowed,
   });
   const { write: approveWrite, isLoading: isApproving } = useContractWrite({
     ...approveCfg,
-    onSuccess() { toast.success('Approval sent!'); },
-    onError(e)  { toast.error('Approve failed: ' + e.message); },
+    onSuccess() {
+      toast.success('Approval sent!');
+    },
+    onError(e) {
+      toast.error(`Approve failed: ${e.message}`);
+    },
   });
   useWaitForTransaction({
-    hash:    approveWrite?.hash,
+    hash: approveWrite?.hash,
     enabled: Boolean(approveWrite),
-    onSuccess() { toast.success('Approval confirmed!'); },
+    onSuccess() {
+      toast.success('Approval confirmed!');
+    },
   });
 
   // ── Mint USDEC ──────────────────────────────────────────────────────
   const { config: mintCfg, error: mintPrepError } = usePrepareContractWrite({
-    address:      USDEC_ADDRESS,
-    abi:          usdecAbi,
+    address: USDEC_ADDRESS,
+    abi: usdecAbi,
     functionName: 'mint',
-    args:         vaultReady && fullAmount ? [fullAmount] : undefined,
-    enabled:      isConnected
-                 && onBase
-                 && isAllowed
-                 && hasAllowance
-                 && vaultReady
-                 && hasPreviewShares,
+    args: vaultReady && fullAmount ? [fullAmount] : undefined,
+    enabled:
+      isConnected &&
+      onBase &&
+      isAllowed &&
+      hasAllowance &&
+      vaultReady &&
+      hasPreviewShares,
   });
   const { write: mintWrite, isLoading: isMinting } = useContractWrite({
     ...mintCfg,
@@ -162,28 +194,33 @@ export default function Home() {
       toast.success('Mint tx sent!');
       setAmount('');
     },
-    onError(e) { toast.error('Mint failed: ' + e.message); },
+    onError(e) {
+      toast.error(`Mint failed: ${e.message}`);
+    },
   });
   useWaitForTransaction({
-    hash:    mintWrite?.hash,
+    hash: mintWrite?.hash,
     enabled: Boolean(mintWrite),
-    onSuccess() { toast.success('Mint confirmed!'); },
+    onSuccess() {
+      toast.success('Mint confirmed!');
+    },
   });
 
   // ── Redeem USDEC ────────────────────────────────────────────────────
   const redeemValue = useMemo(() => {
-    const n = Number(redeem);
-    return isNaN(n) || n <= 0
-      ? undefined
-      : ethers.utils.parseUnits(redeem, 6);
+    try {
+      return ethers.utils.parseUnits(redeem || '0', 6);
+    } catch {
+      return undefined;
+    }
   }, [redeem]);
   const redeemHex = redeemValue?.toHexString();
   const { config: redeemCfg } = usePrepareContractWrite({
-    address:      USDEC_ADDRESS,
-    abi:          usdecAbi,
+    address: USDEC_ADDRESS,
+    abi: usdecAbi,
     functionName: 'redeem',
-    args:         redeemHex ? [redeemHex] : undefined,
-    enabled:      isConnected && onBase && Boolean(redeemHex),
+    args: redeemHex ? [redeemHex] : undefined,
+    enabled: isConnected && onBase && Boolean(redeemHex),
   });
   const { write: redeemWrite, isLoading: isRedeeming } = useContractWrite({
     ...redeemCfg,
@@ -192,16 +229,25 @@ export default function Home() {
       toast.success('Redeem sent!');
       setRedeem('');
     },
-    onError(e) { toast.error('Redeem failed: ' + e.message); },
+    onError(e) {
+      toast.error(`Redeem failed: ${e.message}`);
+    },
+  });
+  useWaitForTransaction({
+    hash: redeemWrite?.hash,
+    enabled: Boolean(redeemWrite),
+    onSuccess() {
+      toast.success('Redeem confirmed!');
+    },
   });
 
   return (
     <>
       <Head>
-        <meta charSet="utf-8"/>
-        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>USDEC – A Stablecoin Built for the Creator Economy</title>
-        <link rel="icon" href="/favicon.png"/>
+        <link rel="icon" href="/favicon.png" />
       </Head>
 
       <main
@@ -210,7 +256,12 @@ export default function Home() {
       >
         {/* Logo */}
         <div className="flex flex-col items-center bg-black bg-opacity-60 p-4 rounded-xl my-6">
-          <Image src="/usdec-logo-gold.png" width={180} height={180} alt="USDEC"/>
+          <Image
+            src="/usdec-logo-gold.png"
+            width={180}
+            height={180}
+            alt="USDEC logo"
+          />
           <p className="text-xs text-gray-200 italic">⏳ redeemable anytime</p>
         </div>
 
@@ -223,60 +274,64 @@ export default function Home() {
 
         {/* Mint Section */}
         <section className="bg-white bg-opacity-90 p-6 rounded-2xl shadow-xl max-w-sm mx-auto mb-6 text-center">
-          <ConnectButton/>
+          <ConnectButton />
           {isConnected && (
             <>
               {!onBase && <p className="text-red-600 mb-2">Switch to Base network.</p>}
-              {!isAllowed
-                ? <p className="text-red-600 mb-4">🚫 Not allow-listed.</p>
-                : <>
-                    <input
-                      type="number"
-                      min={MIN_INPUT}
-                      max={MAX_INPUT}
-                      placeholder={`Enter ${MIN_INPUT}–${MAX_INPUT} USDC (you have ${displayRawUsdc})`}
-                      value={amount}
-                      onChange={e => {
-                        const v = e.target.value;
-                        if (v === '' || /^\d*(\.\d{0,6})?$/.test(v)) setAmount(v);
-                      }}
-                      className="w-full p-2 mb-2 border rounded"
-                    />
+              {!isAllowed ? (
+                <p className="text-red-600 mb-4">🚫 Not allow-listed.</p>
+              ) : (
+                <>
+                  <input
+                    type="number"
+                    min={MIN_INPUT}
+                    max={MAX_INPUT}
+                    placeholder={`Enter ${MIN_INPUT}–${MAX_INPUT} USDC (you have ${displayRawUsdc})`}
+                    value={amount}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === '' || /^\d*(\.\d{0,6})?$/.test(v)) setAmount(v);
+                    }}
+                    className="w-full p-2 mb-2 border rounded"
+                  />
 
-                    {isValidAmount && vaultAmount && (
-                      <p className="text-gray-700 mb-2">
-                        Fee: {(Number(feeAmount) / 1e6).toFixed(2)} USDC • Vault: {(Number(vaultAmount) / 1e6).toFixed(2)} USDC
-                      </p>
-                    )}
+                  {isValidAmount && vaultAmount && (
+                    <p className="text-gray-700 mb-2">
+                      Fee: {(Number(feeAmount) / 1e6).toFixed(2)} USDC • Vault: {(Number(vaultAmount) / 1e6).toFixed(2)} USDC
+                    </p>
+                  )}
 
-                    {vaultReady && !hasPreviewShares && (
-                      <p className="text-red-600 mb-2">
-                        Deposit too small to mint any shares, try a larger amount.
-                      </p>
-                    )}
+                  {previewError && (
+                    <p className="text-red-600 mb-2">Vault unavailable, try again later.</p>
+                  )}
 
-                    {mintPrepError && (
-                      <p className="text-red-600 mb-2">{mintPrepError.message}</p>
-                    )}
+                  {vaultReady && !hasPreviewShares && (
+                    <p className="text-red-600 mb-2">Deposit too small to mint any shares, try a larger amount.</p>
+                  )}
 
-                    {!hasAllowance
-                      ? <button
-                          onClick={() => approveWrite?.()}
-                          disabled={!approveWrite || isApproving || !isValidAmount}
-                          className="w-full p-2 mb-2 text-white rounded bg-yellow-600 disabled:bg-gray-400"
-                        >
-                          {isApproving ? 'Approving…' : 'Approve USDC'}
-                        </button>
-                      : <button
-                          onClick={() => mintWrite?.()}
-                          disabled={!mintWrite || isMinting || !vaultReady || !hasPreviewShares}
-                          className="w-full p-2 text-white rounded bg-blue-600 disabled:bg-gray-400"
-                        >
-                          {isMinting ? 'Minting…' : 'Mint'}
-                        </button>
-                    }
-                  </>
-              }
+                  {mintPrepError && (
+                    <p className="text-red-600 mb-2">{mintPrepError.message}</p>
+                  )}
+
+                  {!hasAllowance ? (
+                    <button
+                      onClick={() => approveWrite?.()}
+                      disabled={!approveWrite || isApproving || !isValidAmount}
+                      className="w-full p-2 mb-2 text-white rounded bg-yellow-600 disabled:bg-gray-400"
+                    >
+                      {isApproving ? 'Approving…' : 'Approve USDC'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => mintWrite?.()}
+                      disabled={!mintWrite || isMinting || !vaultReady || !hasPreviewShares}
+                      className="w-full p-2 text-white rounded bg-blue-600 disabled:bg-gray-400"
+                    >
+                      {isMinting ? 'Minting…' : 'Mint'}
+                    </button>
+                  )}
+                </>
+              )}
             </>
           )}
         </section>
@@ -288,7 +343,7 @@ export default function Home() {
             type="number"
             placeholder="Amount to redeem"
             value={redeem}
-            onChange={e => {
+            onChange={(e) => {
               const v = e.target.value;
               if (v === '' || /^\d*(\.\d{0,6})?$/.test(v)) setRedeem(v);
             }}
@@ -310,7 +365,7 @@ export default function Home() {
           <p className="text-sm">Platform: Arcadia Finance</p>
           <p className="text-sm">Network: Base</p>
           <a
-            href="https://arcadia.finance/pool/8453/0xEFE32813dBA3A783059d50e5358b9e3661218daD"
+            href={`https://arcadia.finance/pool/${BASE_CHAIN_ID}/${ARC_LENDING_POOL_ADDRESS}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-blue-600 underline"
@@ -329,7 +384,7 @@ export default function Home() {
           </h3>
           <p className="text-sm leading-relaxed" style={{ color: '#bc9c22' }}>
             The Koru is a spiral derived from the unfurling frond of the silver fern.
-            It symbolizes new life, growth, strength and peace. This yacht, named Koru,
+            It symbolizes new life, growth, strength, and peace. This yacht, named Koru,
             was built in 2023 and represents a journey toward new beginnings. In the
             creator economy, we honor the same spirit — evolving with purpose and
             navigating the open seas of ownership and opportunity.
