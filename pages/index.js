@@ -21,7 +21,7 @@ const USDC_ADDRESS  = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const DECIMALS      = 6;
 const BASE_CHAIN_ID = 8453;
 
-// Regex to allow only positive numbers with up to 6 decimals, no leading zeroes (unless "0.x")
+// Regex: positive number up to 6 decimals, no leading zeros except "0.x"
 const AMOUNT_REGEX = /^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/;
 
 export default function Home() {
@@ -33,20 +33,30 @@ export default function Home() {
   const [redeemAmt, setRedeemAmt] = useState("");
   const [txHash, setTxHash]       = useState("");
 
-  // — Only parse if it matches our regex and > 0 —
+  // — Only produce a BigInt if the input is valid and >0 —
   const mintValue = useMemo(() => {
     if (!AMOUNT_REGEX.test(mintAmt)) return undefined;
-    const v = ethers.utils.parseUnits(mintAmt, DECIMALS);
-    return v.isZero() ? undefined : v;
+    try {
+      const bn = ethers.utils.parseUnits(mintAmt, DECIMALS);
+      const bi = bn.toBigInt();
+      return bi > 0n ? bi : undefined;
+    } catch {
+      return undefined;
+    }
   }, [mintAmt]);
 
   const redeemValue = useMemo(() => {
     if (!AMOUNT_REGEX.test(redeemAmt)) return undefined;
-    const v = ethers.utils.parseUnits(redeemAmt, DECIMALS);
-    return v.isZero() ? undefined : v;
+    try {
+      const bn = ethers.utils.parseUnits(redeemAmt, DECIMALS);
+      const bi = bn.toBigInt();
+      return bi > 0n ? bi : undefined;
+    } catch {
+      return undefined;
+    }
   }, [redeemAmt]);
 
-  // — Approval check —
+  // — Approval check for USDC →
   const { data: allowance } = useContractRead({
     address: USDC_ADDRESS,
     abi: erc20ABI,
@@ -55,15 +65,17 @@ export default function Home() {
     enabled: isConnected && onBase && Boolean(mintValue),
     watch: true,
   });
-  const needsApprove = allowance && mintValue && allowance.lt(mintValue);
+  const needsApprove = allowance !== undefined && mintValue !== undefined
+    ? BigInt(allowance.toString()) < mintValue
+    : false;
 
-  // — Approve USDC —
+  // — Prepare / write approve(tx) —
   const { config: aprCfg, error: aprPrepError } = usePrepareContractWrite({
     address: USDC_ADDRESS,
     abi: erc20ABI,
     functionName: "approve",
     args: needsApprove ? [USDEC_ADDRESS, mintValue] : undefined,
-    enabled: Boolean(needsApprove),
+    enabled: needsApprove,
   });
   const { write: doApprove, isLoading: aprLoading, error: aprWriteError } =
     useContractWrite({
@@ -82,12 +94,12 @@ export default function Home() {
     },
   });
 
-  // — Mint USDEC —
+  // — Prepare / write mint(tx) —
   const { config: mintCfg, error: mintPrepError } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: "mint",
-    args: mintValue ? [mintValue] : undefined,
+    args: mintValue !== undefined ? [mintValue] : undefined,
     enabled: isConnected && onBase && !needsApprove && Boolean(mintValue),
   });
   const { write: doMint, isLoading: mintLoading, error: mintWriteError } =
@@ -109,12 +121,12 @@ export default function Home() {
     },
   });
 
-  // — Redeem USDEC —
+  // — Prepare / write redeem(tx) —
   const { config: redCfg, error: redPrepError } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: "redeem",
-    args: redeemValue ? [redeemValue] : undefined,
+    args: redeemValue !== undefined ? [redeemValue] : undefined,
     enabled: isConnected && onBase && Boolean(redeemValue),
   });
   const { write: doRedeem, isLoading: redLoading, error: redWriteError } =
@@ -148,7 +160,7 @@ export default function Home() {
           </p>
         )}
 
-        {/* Mint */}
+        {/* Mint Section */}
         <section className="space-y-2">
           <h2 className="text-xl font-bold">Mint USDEC</h2>
           <input
@@ -183,7 +195,7 @@ export default function Home() {
           )}
         </section>
 
-        {/* Redeem */}
+        {/* Redeem Section */}
         <section className="space-y-2">
           <h2 className="text-xl font-bold">Redeem USDEC</h2>
           <input
@@ -206,7 +218,7 @@ export default function Home() {
           </button>
         </section>
 
-        {/* Tx Link */}
+        {/* Transaction Link */}
         {txHash && (
           <a
             href={`https://basescan.org/tx/${txHash}`}
