@@ -21,7 +21,12 @@ const USDC_ADDRESS  = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const DECIMALS      = 6;
 const BASE_CHAIN_ID = 8453;
 
-// Regex: positive number up to 6 decimals, no leading zeros except "0.x"
+// Vault minimum and fee constants, match your Solidity
+const MINT_FEE_BPS    = 100n;     // 1%
+const BPS_DENOMINATOR = 10000n;
+const MIN_VAULT_ASSETS = 10n * 10n ** BigInt(DECIMALS); // 10 USDC
+
+// Regex: positive number up to 6 decimals
 const AMOUNT_REGEX = /^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/;
 
 export default function Home() {
@@ -33,7 +38,7 @@ export default function Home() {
   const [redeemAmt, setRedeemAmt] = useState("");
   const [txHash, setTxHash]       = useState("");
 
-  // — Only produce a BigInt if the input is valid and >0 —
+  // — parse mintAmt → BigInt if valid & >0 —
   const mintValue = useMemo(() => {
     if (!AMOUNT_REGEX.test(mintAmt)) return undefined;
     try {
@@ -45,6 +50,16 @@ export default function Home() {
     }
   }, [mintAmt]);
 
+  // netAssets = mintValue * (1 - fee)
+  const netAssets = useMemo(() => {
+    if (mintValue === undefined) return undefined;
+    return (mintValue * (BPS_DENOMINATOR - MINT_FEE_BPS)) / BPS_DENOMINATOR;
+  }, [mintValue]);
+
+  // only allow mint if netAssets >= minimum vault
+  const canMint = netAssets !== undefined && netAssets >= MIN_VAULT_ASSETS;
+
+  // — parse redeemAmt → BigInt if valid & >0 —
   const redeemValue = useMemo(() => {
     if (!AMOUNT_REGEX.test(redeemAmt)) return undefined;
     try {
@@ -56,7 +71,7 @@ export default function Home() {
     }
   }, [redeemAmt]);
 
-  // — Approval check for USDC →
+  // — check USDC allowance →
   const { data: allowance } = useContractRead({
     address: USDC_ADDRESS,
     abi: erc20ABI,
@@ -65,11 +80,12 @@ export default function Home() {
     enabled: isConnected && onBase && Boolean(mintValue),
     watch: true,
   });
-  const needsApprove = allowance !== undefined && mintValue !== undefined
-    ? BigInt(allowance.toString()) < mintValue
-    : false;
+  const needsApprove =
+    allowance !== undefined &&
+    mintValue !== undefined &&
+    BigInt(allowance.toString()) < mintValue;
 
-  // — Prepare / write approve(tx) —
+  // — APPROVE —
   const { config: aprCfg, error: aprPrepError } = usePrepareContractWrite({
     address: USDC_ADDRESS,
     abi: erc20ABI,
@@ -94,13 +110,14 @@ export default function Home() {
     },
   });
 
-  // — Prepare / write mint(tx) —
+  // — MINT —
   const { config: mintCfg, error: mintPrepError } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
     functionName: "mint",
-    args: mintValue !== undefined ? [mintValue] : undefined,
-    enabled: isConnected && onBase && !needsApprove && Boolean(mintValue),
+    args: canMint ? [mintValue] : undefined,
+    enabled:
+      isConnected && onBase && !needsApprove && canMint,
   });
   const { write: doMint, isLoading: mintLoading, error: mintWriteError } =
     useContractWrite({
@@ -121,7 +138,7 @@ export default function Home() {
     },
   });
 
-  // — Prepare / write redeem(tx) —
+  // — REDEEM —
   const { config: redCfg, error: redPrepError } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -171,11 +188,18 @@ export default function Home() {
             className="w-full p-2 border"
             disabled={!onBase}
           />
+          {/* errors */}
           {aprPrepError && <p className="text-red-600">{aprPrepError.message}</p>}
           {aprWriteError && <p className="text-red-600">{aprWriteError.message}</p>}
           {mintPrepError && <p className="text-red-600">{mintPrepError.message}</p>}
           {mintWriteError && <p className="text-red-600">{mintWriteError.message}</p>}
-
+          {/* minimum deposit warning */}
+          {mintValue !== undefined && !canMint && (
+            <p className="text-red-600">
+              Minimum net deposit into vault is 10 USDC
+            </p>
+          )}
+          {/* buttons */}
           {needsApprove ? (
             <button
               onClick={() => doApprove?.()}
@@ -208,7 +232,6 @@ export default function Home() {
           />
           {redPrepError && <p className="text-red-600">{redPrepError.message}</p>}
           {redWriteError && <p className="text-red-600">{redWriteError.message}</p>}
-
           <button
             onClick={() => doRedeem?.()}
             disabled={!doRedeem || redLoading}
@@ -218,7 +241,7 @@ export default function Home() {
           </button>
         </section>
 
-        {/* Transaction Link */}
+        {/* Tx Link */}
         {txHash && (
           <a
             href={`https://basescan.org/tx/${txHash}`}
