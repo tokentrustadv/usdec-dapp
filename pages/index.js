@@ -30,17 +30,29 @@ export default function Home() {
   const [redeemAmt, setRedeemAmt] = useState("");
   const [txHash, setTxHash]       = useState("");
 
-  // parse amounts
+  // — Parse mintAmt only if non-empty and > 0 —
   const mintValue = useMemo(() => {
-    try { return ethers.utils.parseUnits(mintAmt || "0", DECIMALS); }
-    catch { return undefined; }
+    if (!mintAmt) return undefined;
+    try {
+      const v = ethers.utils.parseUnits(mintAmt, DECIMALS);
+      return v.gt(ethers.constants.Zero) ? v : undefined;
+    } catch {
+      return undefined;
+    }
   }, [mintAmt]);
+
+  // — Parse redeemAmt only if non-empty and > 0 —
   const redeemValue = useMemo(() => {
-    try { return ethers.utils.parseUnits(redeemAmt || "0", DECIMALS); }
-    catch { return undefined; }
+    if (!redeemAmt) return undefined;
+    try {
+      const v = ethers.utils.parseUnits(redeemAmt, DECIMALS);
+      return v.gt(ethers.constants.Zero) ? v : undefined;
+    } catch {
+      return undefined;
+    }
   }, [redeemAmt]);
 
-  // approval check
+  // — Check if USDC approval is needed —
   const { data: allowance } = useContractRead({
     address: USDC_ADDRESS,
     abi: erc20ABI,
@@ -51,7 +63,7 @@ export default function Home() {
   });
   const needsApprove = allowance && mintValue && allowance.lt(mintValue);
 
-  // APPROVE
+  // — Prepare / write approve tx —
   const { config: aprCfg, error: aprPrepError } = usePrepareContractWrite({
     address: USDC_ADDRESS,
     abi: erc20ABI,
@@ -59,20 +71,25 @@ export default function Home() {
     args: needsApprove ? [USDEC_ADDRESS, mintValue] : undefined,
     enabled: needsApprove,
   });
-  const { write: doApprove, isLoading: aprLoading, error: aprWriteError } = useContractWrite({
-    ...aprCfg,
-    onError(e) { 
-      console.error("Approve error", e); 
-      toast.error(`Approve failed: ${e.message}`); 
-    },
-    onSuccess() { toast.success("Approve tx sent"); }
-  });
+  const { write: doApprove, isLoading: aprLoading, error: aprWriteError } =
+    useContractWrite({
+      ...aprCfg,
+      onError(e) {
+        console.error("Approve error", e);
+        toast.error(`Approve failed: ${e.message}`);
+      },
+      onSuccess() {
+        toast.success("Approve tx sent");
+      },
+    });
   useWaitForTransaction({
     hash: doApprove?.hash,
-    onSuccess() { toast.success("Approve confirmed"); }
+    onSuccess() {
+      toast.success("Approve confirmed");
+    },
   });
 
-  // MINT
+  // — Prepare / write mint tx —
   const { config: mintCfg, error: mintPrepError } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -80,24 +97,27 @@ export default function Home() {
     args: mintValue ? [mintValue] : undefined,
     enabled: isConnected && onBase && !needsApprove && Boolean(mintValue),
   });
-  const { write: doMint, isLoading: mintLoading, error: mintWriteError } = useContractWrite({
-    ...mintCfg,
-    onError(e) { 
-      console.error("Mint error", e); 
-      toast.error(`Mint failed: ${e.message}`); 
-    },
-    onSuccess(d) {
-      setTxHash(d.hash);
-      setMintAmt("");
-      toast.success("Mint tx sent");
-    }
-  });
+  const { write: doMint, isLoading: mintLoading, error: mintWriteError } =
+    useContractWrite({
+      ...mintCfg,
+      onError(e) {
+        console.error("Mint error", e);
+        toast.error(`Mint failed: ${e.message}`);
+      },
+      onSuccess(d) {
+        setTxHash(d.hash);
+        setMintAmt("");
+        toast.success("Mint tx sent");
+      },
+    });
   useWaitForTransaction({
     hash: doMint?.hash,
-    onSuccess() { toast.success("Mint confirmed"); }
+    onSuccess() {
+      toast.success("Mint confirmed");
+    },
   });
 
-  // REDEEM
+  // — Prepare / write redeem tx —
   const { config: redCfg, error: redPrepError } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -105,21 +125,24 @@ export default function Home() {
     args: redeemValue ? [redeemValue] : undefined,
     enabled: isConnected && onBase && Boolean(redeemValue),
   });
-  const { write: doRedeem, isLoading: redLoading, error: redWriteError } = useContractWrite({
-    ...redCfg,
-    onError(e) { 
-      console.error("Redeem error", e); 
-      toast.error(`Redeem failed: ${e.message}`); 
-    },
-    onSuccess(d) {
-      setTxHash(d.hash);
-      setRedeemAmt("");
-      toast.success("Redeem tx sent");
-    }
-  });
+  const { write: doRedeem, isLoading: redLoading, error: redWriteError } =
+    useContractWrite({
+      ...redCfg,
+      onError(e) {
+        console.error("Redeem error", e);
+        toast.error(`Redeem failed: ${e.message}`);
+      },
+      onSuccess(d) {
+        setTxHash(d.hash);
+        setRedeemAmt("");
+        toast.success("Redeem tx sent");
+      },
+    });
   useWaitForTransaction({
     hash: doRedeem?.hash,
-    onSuccess() { toast.success("Redeem confirmed"); }
+    onSuccess() {
+      toast.success("Redeem confirmed");
+    },
   });
 
   return (
@@ -136,7 +159,7 @@ export default function Home() {
           </p>
         )}
 
-        {/* Mint */}
+        {/* Mint Section */}
         <section className="space-y-2">
           <h2 className="text-xl font-bold">Mint USDEC</h2>
           <input
@@ -171,7 +194,7 @@ export default function Home() {
           )}
         </section>
 
-        {/* Redeem */}
+        {/* Redeem Section */}
         <section className="space-y-2">
           <h2 className="text-xl font-bold">Redeem USDEC</h2>
           <input
@@ -194,7 +217,7 @@ export default function Home() {
           </button>
         </section>
 
-        {/* Tx Link */}
+        {/* Transaction Link */}
         {txHash && (
           <a
             href={`https://basescan.org/tx/${txHash}`}
