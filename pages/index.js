@@ -20,21 +20,22 @@ import { allowedUsers } from '../allowlist';
 
 // ── Config & Constants ─────────────────────────────────────────────────
 const BASE_CHAIN_ID = Number(process.env.NEXT_PUBLIC_BASE_CHAIN_ID || '8453');
-const USDEC_ADDRESS = process.env.NEXT_PUBLIC_USDEC_ADDRESS!;
-const RAW_USDC_ADDRESS = process.env.NEXT_PUBLIC_RAW_USDC_ADDRESS!;
-const ARC_LENDING_POOL_ADDRESS = process.env.NEXT_PUBLIC_ARC_LENDING_POOL_ADDRESS!;
+const USDEC_ADDRESS = process.env.NEXT_PUBLIC_USDEC_ADDRESS || '';
+const RAW_USDC_ADDRESS = process.env.NEXT_PUBLIC_RAW_USDC_ADDRESS || '';
+const ARC_LENDING_POOL_ADDRESS =
+  process.env.NEXT_PUBLIC_ARC_LENDING_POOL_ADDRESS || '';
 
 const MIN_INPUT = 11;
 const MAX_INPUT = 500;
 const MINT_FEE_BPS = 100;
-const BPS_DENOMINATOR = 10_000;
+const BPS_DENOMINATOR = 10000;
 const MIN_VAULT_USDC = ethers.utils.parseUnits('10', 6);
 
 // ── Allowlist Set ───────────────────────────────────────────────────────
 const allowedSet = new Set(allowedUsers.map((a) => a.toLowerCase()));
 
 // ── Custom Hook ────────────────────────────────────────────────────────
-function useIsBaseNetwork(chain: ReturnType<typeof useNetwork>['chain']) {
+function useIsBaseNetwork(chain) {
   return chain?.id === BASE_CHAIN_ID;
 }
 
@@ -56,13 +57,13 @@ export default function Home() {
     }
   }, [amount]);
 
-  const isValidAmount = useMemo(
-    () =>
+  const isValidAmount = useMemo(() => {
+    return (
       fullAmount &&
       fullAmount.gte(ethers.utils.parseUnits(MIN_INPUT.toString(), 6)) &&
-      fullAmount.lte(ethers.utils.parseUnits(MAX_INPUT.toString(), 6)),
-    [fullAmount]
-  );
+      fullAmount.lte(ethers.utils.parseUnits(MAX_INPUT.toString(), 6))
+    );
+  }, [fullAmount]);
 
   const feeAmount = fullAmount?.mul(MINT_FEE_BPS).div(BPS_DENOMINATOR);
   const vaultAmount = feeAmount ? fullAmount.sub(feeAmount) : undefined;
@@ -246,8 +247,7 @@ export default function Home() {
       <Head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>USDEC – A Stablecoin Built for the Creator Economy</title>
-        <link rel="icon" href="/favicon.png" />
+        <title>USDEC – A Stablecoin Built for the Creator Economy</title>        <link rel="icon" href="/favicon.png" />
       </Head>
 
       <main
@@ -275,8 +275,7 @@ export default function Home() {
         {/* Mint Section */}
         <section className="bg-white bg-opacity-90 p-6 rounded-2xl shadow-xl max-w-sm mx-auto mb-6 text-center">
           <ConnectButton />
-          {isConnected && (
-            <>
+          {isConnected && (            <>
               {!onBase && <p className="text-red-600 mb-2">Switch to Base network.</p>}
               {!isAllowed ? (
                 <p className="text-red-600 mb-4">🚫 Not allow-listed.</p>
