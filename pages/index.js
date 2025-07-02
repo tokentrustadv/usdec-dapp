@@ -21,6 +21,9 @@ const USDC_ADDRESS  = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const DECIMALS      = 6;
 const BASE_CHAIN_ID = 8453;
 
+// Regex to allow only positive numbers with up to 6 decimals, no leading zeroes (unless "0.x")
+const AMOUNT_REGEX = /^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/;
+
 export default function Home() {
   const { address, isConnected } = useAccount();
   const { chain } = useNetwork();
@@ -30,29 +33,20 @@ export default function Home() {
   const [redeemAmt, setRedeemAmt] = useState("");
   const [txHash, setTxHash]       = useState("");
 
-  // — Parse mintAmt only if non-empty and > 0 —
+  // — Only parse if it matches our regex and > 0 —
   const mintValue = useMemo(() => {
-    if (!mintAmt) return undefined;
-    try {
-      const v = ethers.utils.parseUnits(mintAmt, DECIMALS);
-      return v.gt(ethers.constants.Zero) ? v : undefined;
-    } catch {
-      return undefined;
-    }
+    if (!AMOUNT_REGEX.test(mintAmt)) return undefined;
+    const v = ethers.utils.parseUnits(mintAmt, DECIMALS);
+    return v.isZero() ? undefined : v;
   }, [mintAmt]);
 
-  // — Parse redeemAmt only if non-empty and > 0 —
   const redeemValue = useMemo(() => {
-    if (!redeemAmt) return undefined;
-    try {
-      const v = ethers.utils.parseUnits(redeemAmt, DECIMALS);
-      return v.gt(ethers.constants.Zero) ? v : undefined;
-    } catch {
-      return undefined;
-    }
+    if (!AMOUNT_REGEX.test(redeemAmt)) return undefined;
+    const v = ethers.utils.parseUnits(redeemAmt, DECIMALS);
+    return v.isZero() ? undefined : v;
   }, [redeemAmt]);
 
-  // — Check if USDC approval is needed —
+  // — Approval check —
   const { data: allowance } = useContractRead({
     address: USDC_ADDRESS,
     abi: erc20ABI,
@@ -63,19 +57,18 @@ export default function Home() {
   });
   const needsApprove = allowance && mintValue && allowance.lt(mintValue);
 
-  // — Prepare / write approve tx —
+  // — Approve USDC —
   const { config: aprCfg, error: aprPrepError } = usePrepareContractWrite({
     address: USDC_ADDRESS,
     abi: erc20ABI,
     functionName: "approve",
     args: needsApprove ? [USDEC_ADDRESS, mintValue] : undefined,
-    enabled: needsApprove,
+    enabled: Boolean(needsApprove),
   });
   const { write: doApprove, isLoading: aprLoading, error: aprWriteError } =
     useContractWrite({
       ...aprCfg,
       onError(e) {
-        console.error("Approve error", e);
         toast.error(`Approve failed: ${e.message}`);
       },
       onSuccess() {
@@ -89,7 +82,7 @@ export default function Home() {
     },
   });
 
-  // — Prepare / write mint tx —
+  // — Mint USDEC —
   const { config: mintCfg, error: mintPrepError } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -101,7 +94,6 @@ export default function Home() {
     useContractWrite({
       ...mintCfg,
       onError(e) {
-        console.error("Mint error", e);
         toast.error(`Mint failed: ${e.message}`);
       },
       onSuccess(d) {
@@ -117,7 +109,7 @@ export default function Home() {
     },
   });
 
-  // — Prepare / write redeem tx —
+  // — Redeem USDEC —
   const { config: redCfg, error: redPrepError } = usePrepareContractWrite({
     address: USDEC_ADDRESS,
     abi: usdecAbi,
@@ -129,7 +121,6 @@ export default function Home() {
     useContractWrite({
       ...redCfg,
       onError(e) {
-        console.error("Redeem error", e);
         toast.error(`Redeem failed: ${e.message}`);
       },
       onSuccess(d) {
@@ -147,26 +138,24 @@ export default function Home() {
 
   return (
     <>
-      <Head>
-        <title>USDEC Mint & Redeem</title>
-      </Head>
+      <Head><title>USDEC Mint & Redeem</title></Head>
       <main className="p-6 space-y-6 max-w-md mx-auto">
         <ConnectButton />
 
-        {!onBase && isConnected && (
+        {isConnected && !onBase && (
           <p className="text-red-600">
-            Please switch your wallet to Base (chain {BASE_CHAIN_ID}).
+            Switch your wallet to Base (chain {BASE_CHAIN_ID}).
           </p>
         )}
 
-        {/* Mint Section */}
+        {/* Mint */}
         <section className="space-y-2">
           <h2 className="text-xl font-bold">Mint USDEC</h2>
           <input
-            type="number"
-            placeholder="USDC amount"
+            type="text"
+            placeholder="e.g. 11.5"
             value={mintAmt}
-            onChange={(e) => setMintAmt(e.target.value)}
+            onChange={e => setMintAmt(e.target.value)}
             className="w-full p-2 border"
             disabled={!onBase}
           />
@@ -194,14 +183,14 @@ export default function Home() {
           )}
         </section>
 
-        {/* Redeem Section */}
+        {/* Redeem */}
         <section className="space-y-2">
           <h2 className="text-xl font-bold">Redeem USDEC</h2>
           <input
-            type="number"
-            placeholder="USDEC amount"
+            type="text"
+            placeholder="e.g. 5"
             value={redeemAmt}
-            onChange={(e) => setRedeemAmt(e.target.value)}
+            onChange={e => setRedeemAmt(e.target.value)}
             className="w-full p-2 border"
             disabled={!onBase}
           />
@@ -217,7 +206,7 @@ export default function Home() {
           </button>
         </section>
 
-        {/* Transaction Link */}
+        {/* Tx Link */}
         {txHash && (
           <a
             href={`https://basescan.org/tx/${txHash}`}
