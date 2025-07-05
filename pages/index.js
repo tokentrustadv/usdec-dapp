@@ -6,72 +6,53 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import {
   useAccount,
   useNetwork,
+  useContractRead,
   usePrepareContractWrite,
   useContractWrite,
   useWaitForTransaction,
-  useContractRead,
 } from "wagmi";
 import { ethers } from "ethers";
 import { erc20ABI } from "wagmi";
 import usdecAbi from "../usdecAbi.json";
 import toast from "react-hot-toast";
 
-const USDEC_ADDRESS = "0xa4905465C52c1cd7e8cb9C8AA8C5a1DD5fbFCC7b";
-const USDC_ADDRESS  = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-const DECIMALS      = 6;
-const BASE_CHAIN_ID = 8453;
-
-// Vault minimum and fee constants, match your Solidity
-const MINT_FEE_BPS    = 100n;     // 1%
-const BPS_DENOMINATOR = 10000n;
-const MIN_VAULT_ASSETS = 10n * 10n ** BigInt(DECIMALS); // 10 USDC
-
-// Regex: positive number up to 6 decimals
-const AMOUNT_REGEX = /^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/;
+const USDEC_ADDRESS   = "0xa4905465C52c1cd7e8cb9C8AA8C5a1DD5fbFCC7b";
+const USDC_ADDRESS    = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+const DECIMALS        = 6;
+const BASE_CHAIN_ID   = 8453;
+const AMOUNT_REGEX    = /^(?:0|[1-9]\d*)(?:\.\d{1,6})?$/;
 
 export default function Home() {
   const { address, isConnected } = useAccount();
-  const { chain } = useNetwork();
-  const onBase = chain?.id === BASE_CHAIN_ID;
+  const { chain }               = useNetwork();
+  const onBase                  = chain?.id === BASE_CHAIN_ID;
 
   const [mintAmt, setMintAmt]     = useState("");
   const [redeemAmt, setRedeemAmt] = useState("");
   const [txHash, setTxHash]       = useState("");
 
-  // — parse mintAmt → BigInt if valid & >0 —
+  // parse into BigInt only when valid
   const mintValue = useMemo(() => {
     if (!AMOUNT_REGEX.test(mintAmt)) return undefined;
     try {
       const bn = ethers.utils.parseUnits(mintAmt, DECIMALS);
-      const bi = bn.toBigInt();
-      return bi > 0n ? bi : undefined;
+      return bn.toBigInt() > 0n ? bn.toBigInt() : undefined;
     } catch {
       return undefined;
     }
   }, [mintAmt]);
 
-  // netAssets = mintValue * (1 - fee)
-  const netAssets = useMemo(() => {
-    if (mintValue === undefined) return undefined;
-    return (mintValue * (BPS_DENOMINATOR - MINT_FEE_BPS)) / BPS_DENOMINATOR;
-  }, [mintValue]);
-
-  // only allow mint if netAssets >= minimum vault
-  const canMint = netAssets !== undefined && netAssets >= MIN_VAULT_ASSETS;
-
-  // — parse redeemAmt → BigInt if valid & >0 —
   const redeemValue = useMemo(() => {
     if (!AMOUNT_REGEX.test(redeemAmt)) return undefined;
     try {
       const bn = ethers.utils.parseUnits(redeemAmt, DECIMALS);
-      const bi = bn.toBigInt();
-      return bi > 0n ? bi : undefined;
+      return bn.toBigInt() > 0n ? bn.toBigInt() : undefined;
     } catch {
       return undefined;
     }
   }, [redeemAmt]);
 
-  // — check USDC allowance →
+  // read allowance
   const { data: allowance } = useContractRead({
     address: USDC_ADDRESS,
     abi: erc20ABI,
@@ -81,125 +62,98 @@ export default function Home() {
     watch: true,
   });
   const needsApprove =
-    allowance !== undefined &&
+    allowance &&
     mintValue !== undefined &&
     BigInt(allowance.toString()) < mintValue;
 
-  // — APPROVE —
-  const { config: aprCfg, error: aprPrepError } = usePrepareContractWrite({
+  //
+  // 1) APPROVE USDC → USDEC
+  //
+  const { config: aprCfg } = usePrepareContractWrite({
     address: USDC_ADDRESS,
     abi: erc20ABI,
     functionName: "approve",
     args: needsApprove ? [USDEC_ADDRESS, mintValue] : undefined,
     enabled: needsApprove,
   });
-  const { write: doApprove, isLoading: aprLoading, error: aprWriteError } =
-    useContractWrite({
-      ...aprCfg,
-      onError(e) {
-        toast.error(`Approve failed: ${e.message}`);
-      },
-      onSuccess() {
-        toast.success("Approve tx sent");
-      },
-    });
+  const { write: doApprove, isLoading: aprLoading, error: aprError } = useContractWrite({
+    ...aprCfg,
+    onError(e) { toast.error("Approve failed: " + e.message); },
+    onSuccess() { toast.success("Approve sent"); },
+  });
   useWaitForTransaction({
     hash: doApprove?.hash,
-    onSuccess() {
-      toast.success("Approve confirmed");
-    },
+    onSuccess() { toast.success("Approve confirmed"); },
   });
 
-  // — MINT —
-  const { config: mintCfg, error: mintPrepError } = usePrepareContractWrite({
-    address: USDEC_ADDRESS,
-    abi: usdecAbi,
+  //
+  // 2) MINT USDEC (skip simulate with recklesslyUnprepared)
+  //
+  const { write: doMint, isLoading: mintLoading, error: mintError } = useContractWrite({
+    mode:         "recklesslyUnprepared",
+    address:      USDEC_ADDRESS,
+    abi:          usdecAbi,
     functionName: "mint",
-    args: canMint ? [mintValue] : undefined,
-    enabled:
-      isConnected && onBase && !needsApprove && canMint,
-  });
-  const { write: doMint, isLoading: mintLoading, error: mintWriteError } =
-    useContractWrite({
-      ...mintCfg,
-      onError(e) {
-        toast.error(`Mint failed: ${e.message}`);
-      },
-      onSuccess(d) {
-        setTxHash(d.hash);
-        setMintAmt("");
-        toast.success("Mint tx sent");
-      },
-    });
-  useWaitForTransaction({
-    hash: doMint?.hash,
-    onSuccess() {
-      toast.success("Mint confirmed");
+    args:         mintValue !== undefined ? [mintValue] : undefined,
+    enabled:      isConnected && onBase && !needsApprove && mintValue !== undefined,
+    onError(e)   { toast.error("Mint failed: " + e.message); },
+    onSuccess(tx) {
+      setTxHash(tx.hash);
+      setMintAmt("");
+      toast.success("Mint tx sent");
     },
+  });
+  useWaitForTransaction({
+    hash:    doMint?.hash,
+    onSuccess() { toast.success("Mint confirmed"); },
   });
 
-  // — REDEEM —
-  const { config: redCfg, error: redPrepError } = usePrepareContractWrite({
-    address: USDEC_ADDRESS,
-    abi: usdecAbi,
+  //
+  // 3) REDEEM USDEC (also recklesslyUnprepared)
+  //
+  const { write: doRedeem, isLoading: redLoading, error: redError } = useContractWrite({
+    mode:         "recklesslyUnprepared",
+    address:      USDEC_ADDRESS,
+    abi:          usdecAbi,
     functionName: "redeem",
-    args: redeemValue !== undefined ? [redeemValue] : undefined,
-    enabled: isConnected && onBase && Boolean(redeemValue),
-  });
-  const { write: doRedeem, isLoading: redLoading, error: redWriteError } =
-    useContractWrite({
-      ...redCfg,
-      onError(e) {
-        toast.error(`Redeem failed: ${e.message}`);
-      },
-      onSuccess(d) {
-        setTxHash(d.hash);
-        setRedeemAmt("");
-        toast.success("Redeem tx sent");
-      },
-    });
-  useWaitForTransaction({
-    hash: doRedeem?.hash,
-    onSuccess() {
-      toast.success("Redeem confirmed");
+    args:         redeemValue !== undefined ? [redeemValue] : undefined,
+    enabled:      isConnected && onBase && redeemValue !== undefined,
+    onError(e)   { toast.error("Redeem failed: " + e.message); },
+    onSuccess(tx) {
+      setTxHash(tx.hash);
+      setRedeemAmt("");
+      toast.success("Redeem tx sent");
     },
+  });
+  useWaitForTransaction({
+    hash:    doRedeem?.hash,
+    onSuccess() { toast.success("Redeem confirmed"); },
   });
 
   return (
     <>
       <Head><title>USDEC Mint & Redeem</title></Head>
-      <main className="p-6 space-y-6 max-w-md mx-auto">
+      <main className="p-6 max-w-md mx-auto space-y-6">
         <ConnectButton />
 
-        {isConnected && !onBase && (
+        {!onBase && isConnected && (
           <p className="text-red-600">
             Switch your wallet to Base (chain {BASE_CHAIN_ID}).
           </p>
         )}
 
-        {/* Mint Section */}
+        {/* Mint */}
         <section className="space-y-2">
-          <h2 className="text-xl font-bold">Mint USDEC</h2>
+          <h2 className="text-lg font-bold">Mint USDEC</h2>
           <input
-            type="text"
-            placeholder="e.g. 11.5"
+            className="w-full p-2 border"
+            placeholder="USDC amount"
             value={mintAmt}
             onChange={e => setMintAmt(e.target.value)}
-            className="w-full p-2 border"
             disabled={!onBase}
           />
-          {/* errors */}
-          {aprPrepError && <p className="text-red-600">{aprPrepError.message}</p>}
-          {aprWriteError && <p className="text-red-600">{aprWriteError.message}</p>}
-          {mintPrepError && <p className="text-red-600">{mintPrepError.message}</p>}
-          {mintWriteError && <p className="text-red-600">{mintWriteError.message}</p>}
-          {/* minimum deposit warning */}
-          {mintValue !== undefined && !canMint && (
-            <p className="text-red-600">
-              Minimum net deposit into vault is 10 USDC
-            </p>
-          )}
-          {/* buttons */}
+          {aprError && <p className="text-red-600">{aprError.message}</p>}
+          {mintError && <p className="text-red-600">{mintError.message}</p>}
           {needsApprove ? (
             <button
               onClick={() => doApprove?.()}
@@ -219,19 +173,17 @@ export default function Home() {
           )}
         </section>
 
-        {/* Redeem Section */}
+        {/* Redeem */}
         <section className="space-y-2">
-          <h2 className="text-xl font-bold">Redeem USDEC</h2>
+          <h2 className="text-lg font-bold">Redeem USDEC</h2>
           <input
-            type="text"
-            placeholder="e.g. 5"
+            className="w-full p-2 border"
+            placeholder="USDEC amount"
             value={redeemAmt}
             onChange={e => setRedeemAmt(e.target.value)}
-            className="w-full p-2 border"
             disabled={!onBase}
           />
-          {redPrepError && <p className="text-red-600">{redPrepError.message}</p>}
-          {redWriteError && <p className="text-red-600">{redWriteError.message}</p>}
+          {redError && <p className="text-red-600">{redError.message}</p>}
           <button
             onClick={() => doRedeem?.()}
             disabled={!doRedeem || redLoading}
